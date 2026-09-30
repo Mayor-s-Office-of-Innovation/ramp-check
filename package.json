@@ -1,0 +1,62 @@
+{
+  "name": "ramp-check",
+  "version": "0.0.0",
+  "description": "Automated accessibility checks for Playwright: everything axe checks, plus motion, keyboard, reflow, and cross-page consistency.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mayor-s-Office-of-Innovation/ramp-check.git"
+  },
+  "homepage": "https://github.com/Mayor-s-Office-of-Innovation/ramp-check#readme",
+  "bugs": {
+    "url": "https://github.com/Mayor-s-Office-of-Innovation/ramp-check/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "src",
+    "types",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./src/index.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./test": {
+      "types": "./types/test/fixtures.d.ts",
+      "default": "./src/test/fixtures.js"
+    }
+  },
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "build:types": "tsc",
+    "prepack": "npm run build:types"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "axe",
+    "playwright",
+    "reduced-motion",
+    "government"
+  ],
+  "peerDependencies": {
+    "@playwright/test": ">=1.50"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.13.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

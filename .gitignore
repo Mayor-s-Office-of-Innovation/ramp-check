@@ -1,3 +1,9 @@
+types/
+test-results/
+playwright-report/
+.DS_Store
+CLAUDE.local.md
+
 # Logs
 logs
 *.log
