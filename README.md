@@ -20,6 +20,10 @@ Status: phase 0. The core checks and Playwright fixtures work; the
 config-driven CLI, the keyboard audit, and the GitHub Action are next.
 See [Roadmap](#roadmap).
 
+## Is this a replacement for manual accessibility testing?
+
+No. This helps increase automated coverage but you still need to test your applications with a screenreader and get feedback from real people that depend on assistive technologies.
+
 ## Quickstart (teams with Playwright specs)
 
 ```sh
