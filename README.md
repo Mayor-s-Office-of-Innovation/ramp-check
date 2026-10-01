@@ -13,15 +13,46 @@ Automated accessibility checks for Playwright, easy to add to CI.
 
 Everything axe checks, plus the things axe structurally cannot: motion
 (does the page honor reduced motion?), keyboard (can you reach everything?),
-reflow (does it fit a narrow screen?).
+reflow (does it fit a narrow screen?), and consistency across pages.
 
-Status: phase 1. The core checks, the keyboard audit, and the Playwright
-fixtures work; the config-driven CLI and the GitHub Action are next.
-See [Roadmap](#roadmap).
+Status: 0.1.0. The checks, the Playwright fixtures, the patterns module, the
+config-driven CLI with reports and a baseline ratchet, and the GitHub Action
+are built. 1.0 follows the first outside adopters. See [Roadmap](#roadmap).
 
 ## Is this a replacement for manual accessibility testing?
 
 No. This helps increase automated coverage but you still need to test your applications with a screenreader and get feedback from real people that depend on assistive technologies.
+
+## Quickstart (teams with no test harness)
+
+A URL, a config file, one command. No spec code.
+
+```sh
+npm install --save-dev ramp-check @playwright/test
+npx playwright install chromium
+npx ramp-check init          # writes ramp-check.config.js and a11y-allowlist.json
+```
+
+```js
+// ramp-check.config.js
+export default {
+  baseURL: "http://localhost:3000",
+  pages: ["/", "/services", "/contact", { path: "/apply", waitFor: "form" }],
+  matrix: { colorScheme: ["light", "dark"], reducedMotion: ["reduce"], viewport: ["mobile", "desktop"] },
+  policy: "wcag-aaa",
+  allowlist: "./a11y-allowlist.json",
+  baseline: "./a11y-baseline.json",
+};
+```
+
+```sh
+npx ramp-check               # visits every page in every matrix cell; exit 1 on findings
+npx ramp-check baseline      # adopting with existing debt: record it, fail only on new findings
+```
+
+Reports go to `ramp-check-report/` as JSON and as a Markdown summary sized
+for a pull-request comment. Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
+Every option: [docs/config.md](docs/config.md).
 
 ### In CI
 
@@ -257,7 +288,7 @@ exception: the fixtures install a page init script that records every
 
 ## What this does not catch
 
-Automated tools find a fraction accessibility problems. This tool
+Automated tools find a fraction of accessibility problems. This tool
 covers axe's share plus motion, reflow, and keyboard reachability and focus
 visibility. It does not test screen-reader output, content quality, timing,
 arrow-key or Enter/Space operation of custom widgets, or whether a flow makes
