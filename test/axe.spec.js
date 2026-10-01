@@ -11,7 +11,7 @@ test.describe("axe scan", () => {
     const result = await runChecks(page, { policy: "wcag-aaa" });
     expect(keys(result.blocking)).toEqual([]);
     expect(keys(result.warnings)).toEqual([]);
-    expect(result.ran).toEqual(["axe", "reflow", "keyboard"]);
+    expect(result.ran).toEqual(["axe", "reflow", "textSpacing", "keyboard"]);
   });
 
   test("AAA blocks enhanced contrast; 2.2 AA reports it as a warning", async ({ page }) => {

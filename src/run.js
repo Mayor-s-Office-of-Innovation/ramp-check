@@ -8,6 +8,7 @@ import { axeScan, settle } from "./checks/axe.js";
 import { motionAudit } from "./checks/motion.js";
 import { reflowCheck } from "./checks/reflow.js";
 import { keyboardAudit } from "./checks/keyboard.js";
+import { textSpacing } from "./checks/text-spacing.js";
 import { applyAllowlist, loadAllowlist } from "./checks/allowlist.js";
 import { resolvePolicy, severityFor } from "./policy.js";
 
@@ -24,7 +25,7 @@ import { resolvePolicy, severityFor } from "./policy.js";
  * @property {Mode} [bestPractice]   axe's non-WCAG rules: "block" (default) | "warn" | "off"
  * @property {Partial<Record<CheckName, Mode | "auto">>} [checks]
  *   per-check override. "auto" (default) lets the policy decide; "block" or
- *   "warn" forces it; "off" skips the check.
+ *   "warn" forces it; "off" skips the check. `textSpacing` defaults to "warn".
  * @property {import("./checks/motion.js").MotionAuditOptions} [motion]
  * @property {import("./checks/reflow.js").ReflowOptions} [reflow]
  * @property {import("./checks/keyboard.js").KeyboardAuditOptions} [keyboard]
@@ -46,6 +47,7 @@ import { resolvePolicy, severityFor } from "./policy.js";
  * @property {AllowlistEntry[]} unused
  * @property {import("./checks/motion.js").MotionAuditResult} [motion]
  * @property {import("./checks/keyboard.js").KeyboardAuditResult} [keyboard]
+ * @property {import("./checks/text-spacing.js").TextSpacingResult} [textSpacing]
  */
 
 /**
@@ -62,10 +64,9 @@ import { resolvePolicy, severityFor } from "./policy.js";
  * @returns {Promise<CheckResult>}
  */
 export async function runChecks(page, config = {}, ctx = {}) {
-  const policy = resolvePolicy(config.policy);
   const modes = config.checks ?? {};
   /** @param {CheckName} name */
-  const mode = (name) => modes[name] ?? "auto";
+  const mode = (name) => modes[name] ?? (name === "textSpacing" ? "warn" : "auto");
   /** @type {CheckName[]} */
   const ran = [];
   /** @type {Finding[]} */
@@ -74,6 +75,8 @@ export async function runChecks(page, config = {}, ctx = {}) {
   let motion;
   /** @type {import("./checks/keyboard.js").KeyboardAuditResult | undefined} */
   let keyboard;
+  /** @type {import("./checks/text-spacing.js").TextSpacingResult | undefined} */
+  let spacing;
 
   // Motion first, before anything waits: only motion still running is visible.
   if (mode("motion") !== "off" && ctx.reducedMotion) {
@@ -97,6 +100,11 @@ export async function runChecks(page, config = {}, ctx = {}) {
     findings.push(...reflow.findings);
     ran.push("reflow");
   }
+  if (mode("textSpacing") !== "off") {
+    spacing = await textSpacing(page);
+    findings.push(...spacing.findings);
+    ran.push("textSpacing");
+  }
   // Keyboard last: it moves focus (restored afterwards) and is the slowest.
   if (mode("keyboard") !== "off") {
     keyboard = await keyboardAudit(page, config.keyboard);
@@ -104,30 +112,37 @@ export async function runChecks(page, config = {}, ctx = {}) {
     ran.push("keyboard");
   }
 
+  const classified = classify(findings, config, ctx);
+  return { label: ctx.label ?? "", ran, ...classified, motion, keyboard, textSpacing: spacing };
+}
+
+/**
+ * Apply the policy (severity) and the allowlist to any findings list. Used by
+ * `runChecks` and by the fixtures' `a11y.assert` for pattern findings.
+ * @param {Finding[]} findings
+ * @param {RampCheckConfig} [config]
+ * @param {{ now?: Date }} [ctx]
+ */
+export function classify(findings, config = {}, ctx = {}) {
+  const policy = resolvePolicy(config.policy);
+  const modes = config.checks ?? {};
   for (const f of findings) {
-    const override = mode(f.check);
+    const override = modes[f.check] ?? (f.check === "textSpacing" ? "warn" : "auto");
     const sev = severityFor(f.wcag, policy, {
       bestPractice: config.bestPractice,
       override: override === "auto" ? undefined : override,
     });
     f.severity = sev === "off" ? "warn" : sev;
   }
-  const { expired, unused } = applyAllowlist(findings, loadAllowlist(config.allowlist), {
-    now: ctx.now,
-  });
-
+  const { expired, unused } = applyAllowlist(findings, loadAllowlist(config.allowlist), { now: ctx.now });
   return {
-    label: ctx.label ?? "",
     policy: policy.name,
-    ran,
     findings,
     blocking: findings.filter((f) => f.severity === "block" && !f.allowlisted),
     warnings: findings.filter((f) => f.severity === "warn" && !f.allowlisted),
     allowlisted: findings.filter((f) => f.allowlisted),
     expired,
     unused,
-    motion,
-    keyboard,
   };
 }
 

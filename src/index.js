@@ -7,6 +7,7 @@ export { axeScan, settle, formatTarget } from "./checks/axe.js";
 export { motionAudit, motionRuntime } from "./checks/motion.js";
 export { reflowCheck } from "./checks/reflow.js";
 export { keyboardAudit } from "./checks/keyboard.js";
+export { textSpacing, TEXT_SPACING_CSS } from "./checks/text-spacing.js";
 export { siteConsistency, PRIMARY_NAV_SELECTOR } from "./checks/consistency.js";
 export {
   loadBaseline,
@@ -31,7 +32,7 @@ export {
   axeTagsFor,
   wcagFromAxeTags,
 } from "./policy.js";
-export { runChecks, formatFinding, failures } from "./run.js";
+export { runChecks, classify, formatFinding, failures } from "./run.js";
 
 /** @typedef {import("./types.js").Finding} Finding */
 /** @typedef {import("./types.js").AllowlistEntry} AllowlistEntry */

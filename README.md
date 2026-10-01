@@ -79,6 +79,39 @@ a11yMatrix(
 );
 ```
 
+## Patterns: dialogs, focus, announcements, form errors
+
+Some checks need an action only a spec author knows. `ramp-check/patterns`
+has four:
+
+```js
+import { dialogAudit, focusAfter, expectAnnouncement, formErrorAudit } from "ramp-check/patterns";
+
+test("checkout dialog", async ({ page, a11y }) => {
+  await page.goto("/cart");
+  const result = await dialogAudit(page, () => page.getByRole("button", { name: "Checkout" }).click());
+  await a11y.assert("checkout dialog", result.findings);
+});
+```
+
+`dialogAudit` checks focus moves in, Tab stays in, Escape closes, focus
+returns. `focusAfter` checks where focus lands after any action.
+`expectAnnouncement` checks a live region received the text. `formErrorAudit`
+checks errors are identified, described, and focused. See
+[docs/patterns.md](docs/patterns.md), and [docs/recipes.md](docs/recipes.md)
+for composing with a login harness and other common setups.
+
+## Lint rules
+
+```js
+// eslint.config.js
+import { rampCheck } from "ramp-check/eslint";
+export default [...rampCheck({ viewTransitionsIn: ["src/router.js"] })];
+```
+
+Catches `behavior: "smooth"` and stray `startViewTransition()` calls, the two
+motion mistakes CSS reduced-motion guards cannot fix.
+
 ## Choosing your conformance level
 
 The default policy is WCAG AAA. Stepping down is one line:
@@ -124,6 +157,8 @@ Details and the ADA references: [docs/conformance-level.md](docs/conformance-lev
 | keyboard: `focus-obscured`, `focus-partially-obscured` | 2.4.11, 2.4.12 | AA, AAA | the focused element is behind a sticky header, banner or overlay |
 | keyboard: `focus-changes-context` | 3.2.1 | A | receiving focus navigates the page |
 | keyboard: `skip-link-broken`, `skip-link-missing` | 2.4.1 | A, best practice | a skip link that goes nowhere, or a long nav with no way past it |
+| textSpacing: `text-spacing-clipped` | 1.4.12 | AA | text clipped once line height, letter, word and paragraph spacing are raised to the WCAG values (warns by default) |
+| consistency: `duplicate-page-title`, `inconsistent-navigation` | 2.4.2, 3.2.3 | A, AA | runner only: titles shared across pages, primary navigation that differs between pages |
 
 Every check has a seeded defect page under [fixtures/](fixtures/) and a spec
 under [test/](test/) proving it fires.
@@ -199,9 +234,10 @@ is a prerequisite, not compliance.
 | 0 | axe, motion, reflow, allowlist, policy, fixtures, `a11yMatrix` |
 | 1 | keyboard audit: reachability, visible focus, not obscured, no trap, skip link |
 | 2 | config-driven runner and CLI for teams without specs; JSON and Markdown reports; baseline ratchet; site consistency |
-| 3 (now) | GitHub Action with PR comment |
-| 4 | 1.0: publish, Dependabot on axe, first adopters |
-| 5 | text spacing check; patterns module (dialogs, focus return, announcements, form errors); ESLint preset |
+| 3 | GitHub Action with PR comment |
+| 4 (now) | 0.1.0 published; 1.0 after the Action is seen on a real PR and an outside team adopts in under ten minutes |
+| 5 | text spacing check; patterns module; ESLint preset; recipes (built; shipping with 0.1.0) |
+| later | opt-in keyboard extensions listed in [docs/keyboard-limitations.md](docs/keyboard-limitations.md) |
 
 ## Requirements
 

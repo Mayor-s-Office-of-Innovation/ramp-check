@@ -50,7 +50,7 @@ with `reducedMotion: "reduce"`.
 | --- | --- | --- | --- |
 | `policy` | `"wcag-aaa" \| "wcag22-aa" \| "wcag21-aa"` | `"wcag-aaa"` | Which findings block. See [conformance-level.md](conformance-level.md). |
 | `bestPractice` | `"block" \| "warn" \| "off"` | `"block"` | axe's non-WCAG rules, and this tool's best-practice rules. |
-| `checks` | object | all `"auto"` | Per-check mode: `auto`, `block`, `warn`, `off`. Keys: `axe`, `motion`, `reflow`, `keyboard`. |
+| `checks` | object | all `"auto"`, `textSpacing: "warn"` | Per-check mode: `auto`, `block`, `warn`, `off`. Keys: `axe`, `motion`, `reflow`, `keyboard`, `textSpacing`. |
 | `tags` | string[] | | Escape hatch: raw axe tags, replaces the derived list. |
 | `disableRules` | string[] | | axe rule ids to skip entirely. Prefer the allowlist. |
 

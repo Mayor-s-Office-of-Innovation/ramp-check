@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Patterns: dialogs</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    main { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    button, input { font: inherit; padding: .5rem 1rem; }
+    button { background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    dialog { padding: 1rem; border: 1px solid #1a1a1a; }
+    .fake-dialog { display: none; position: fixed; inset: 20% 10%; background: #fff; border: 1px solid #1a1a1a; padding: 1rem; }
+    .fake-dialog.open { display: block; }
+  </style>
+</head>
+<body>
+  <main id="main">
+    <h1>Dialogs</h1>
+    <p><button type="button" id="open-good">Open good dialog</button></p>
+    <p><button type="button" id="open-bad">Open bad dialog</button></p>
+    <p><button type="button" id="elsewhere">Unrelated button</button></p>
+
+    <!-- Good: native modal. showModal() moves focus inside, makes the page inert, Escape closes, focus returns. -->
+    <dialog id="good" aria-labelledby="good-title">
+      <h2 id="good-title">Good dialog</h2>
+      <p><label>Name <input id="good-name"></label></p>
+      <p><button type="button" id="good-ok">OK</button> <button type="button" id="good-cancel">Cancel</button></p>
+    </dialog>
+
+    <!-- Bad: a div toggled with a class. Focus is not moved, Tab leaks out, Escape is ignored, focus is not returned. -->
+    <div class="fake-dialog" id="bad" role="dialog" aria-modal="true" aria-labelledby="bad-title">
+      <h2 id="bad-title">Bad dialog</h2>
+      <p><button type="button" id="bad-ok">OK</button> <button type="button" id="bad-close">Close</button></p>
+    </div>
+  </main>
+  <script>
+    const good = document.getElementById("good");
+    document.getElementById("open-good").addEventListener("click", () => good.showModal());
+    good.addEventListener("close", () => document.getElementById("open-good").focus());
+    document.getElementById("good-ok").addEventListener("click", () => good.close());
+    document.getElementById("good-cancel").addEventListener("click", () => good.close());
+
+    const bad = document.getElementById("bad");
+    document.getElementById("open-bad").addEventListener("click", () => bad.classList.add("open"));
+    document.getElementById("bad-close").addEventListener("click", () => bad.classList.remove("open"));
+  </script>
+</body>
+</html>

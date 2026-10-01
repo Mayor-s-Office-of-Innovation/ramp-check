@@ -32,7 +32,7 @@ test.describe("keyboard audit", () => {
     const result = await runChecks(page, { policy: "wcag-aaa" });
     expect(keys(result.blocking)).toEqual([]);
     expect(keys(result.warnings)).toEqual([]);
-    expect(result.ran).toEqual(["axe", "reflow", "keyboard"]);
+    expect(result.ran).toEqual(["axe", "reflow", "textSpacing", "keyboard"]);
   });
 
   test("reports unreachable controls with the reason", async ({ page }) => {

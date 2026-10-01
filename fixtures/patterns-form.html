@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Patterns: form errors</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    main { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    button, input { font: inherit; padding: .5rem 1rem; }
+    button { background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    form { margin-bottom: 2rem; border: 1px solid #1a1a1a; padding: 1rem; }
+    .error { color: #a4000f; }
+    .is-invalid { border: 2px solid #a4000f; }
+  </style>
+</head>
+<body>
+  <main id="main">
+    <h1>Form errors</h1>
+
+    <form id="good" novalidate>
+      <h2>Good: errors identified, described, focused</h2>
+      <p><label for="good-email">Email</label> <input id="good-email" type="email" aria-describedby="good-email-error"> <span id="good-email-error" class="error"></span></p>
+      <p><button type="submit" id="good-submit">Submit</button></p>
+    </form>
+
+    <form id="bad" novalidate>
+      <h2>Bad: a red border and nothing else</h2>
+      <p><label for="bad-email">Email</label> <input id="bad-email" type="email"></p>
+      <p><button type="submit" id="bad-submit">Submit</button></p>
+    </form>
+
+    <form id="native">
+      <h2>Native: browser validation</h2>
+      <p><label for="native-email">Email</label> <input id="native-email" type="email" required></p>
+      <p><button type="submit" id="native-submit">Submit</button></p>
+    </form>
+  </main>
+  <script>
+    document.getElementById("good").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = document.getElementById("good-email");
+      if (!input.value) {
+        input.setAttribute("aria-invalid", "true");
+        document.getElementById("good-email-error").textContent = "Enter your email address.";
+        input.focus();
+      }
+    });
+    document.getElementById("bad").addEventListener("submit", (e) => {
+      e.preventDefault();
+      document.getElementById("bad-email").classList.add("is-invalid"); // seeded defect
+    });
+    document.getElementById("native").addEventListener("submit", (e) => e.preventDefault());
+  </script>
+</body>
+</html>

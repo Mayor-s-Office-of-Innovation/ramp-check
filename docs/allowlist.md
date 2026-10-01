@@ -26,7 +26,7 @@ file, one per project, and every entry has four required fields:
 | `target` | the finding's target string exactly, or a prefix ending in `*`. Shadow boundaries are written ` >>> `. View transitions are `::view-transition(<names>)`. |
 | `reason` | why this is acceptable for now; shows up in reports |
 | `expires` | ISO date. On the day after, the entry stops suppressing and the run fails naming it. |
-| `check` (optional) | `axe`, `motion`, `reflow`, or `keyboard`, when a rule id could be ambiguous |
+| `check` (optional) | `axe`, `motion`, `reflow`, `keyboard`, `textSpacing`, `consistency`, or `pattern`, when a rule id could be ambiguous |
 
 Point the config at it:
 

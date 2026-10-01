@@ -23,3 +23,8 @@ First public release.
 - Config-driven CLI (`ramp-check`, `ramp-check baseline`, `ramp-check init`)
   with console, JSON and Markdown reports and cross-page consistency checks.
 - Composite GitHub Action with artifact upload and a self-updating PR comment.
+- Text spacing check (1.4.12), warn-level by default.
+- Patterns module (`ramp-check/patterns`): `dialogAudit`, `focusAfter`,
+  `expectAnnouncement`, `formErrorAudit`; `a11y.assert` on the fixture.
+- ESLint preset (`ramp-check/eslint`) for smooth scroll and view transitions.
+- Matrix axis validation; recipes doc.

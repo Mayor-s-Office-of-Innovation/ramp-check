@@ -42,6 +42,14 @@
     "./cli": {
       "types": "./types/cli/run.d.ts",
       "default": "./src/cli/run.js"
+    },
+    "./patterns": {
+      "types": "./types/patterns/index.d.ts",
+      "default": "./src/patterns/index.js"
+    },
+    "./eslint": {
+      "types": "./types/eslint.d.ts",
+      "default": "./src/eslint.js"
     }
   },
   "scripts": {

@@ -15,7 +15,7 @@
  */
 import { test as base, expect } from "@playwright/test";
 import { motionRuntime } from "../checks/motion.js";
-import { failures, runChecks } from "../run.js";
+import { classify, failures, runChecks } from "../run.js";
 import { matrix } from "./matrix.js";
 
 /** @typedef {import("../run.js").RampCheckConfig} RampCheckConfig */
@@ -28,6 +28,9 @@ import { matrix } from "./matrix.js";
  *   annotated and the full result is attached as JSON
  * @property {(label: string, overrides?: RampCheckConfig) => Promise<CheckResult>} scan
  *   run the checks and return the result without asserting
+ * @property {(label: string, findings: import("../types.js").Finding[], overrides?: RampCheckConfig) => Promise<void>} assert
+ *   apply the policy and allowlist to findings from a pattern (or any check
+ *   called directly) and fail the test on blocking ones
  */
 
 /**
@@ -74,6 +77,18 @@ export const test = base.extend(
           }
           expect(failures(result), `${label}: accessibility findings (policy ${result.policy})`).toEqual([]);
           return result;
+        },
+        assert: async (label, findings, overrides) => {
+          const classified = classify(findings, merge(a11yConfig, overrides));
+          const result = { label, ran: [], ...classified };
+          await testInfo.attach(`ramp-check: ${label}`, {
+            body: JSON.stringify(result, null, 2),
+            contentType: "application/json",
+          });
+          for (const w of result.warnings) {
+            testInfo.annotations.push({ type: "a11y-warning", description: `${label}: ${w.rule}: ${w.target}` });
+          }
+          expect(failures(result), `${label}: accessibility findings (policy ${result.policy})`).toEqual([]);
         },
       };
       await use(api);
