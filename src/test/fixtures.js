@@ -12,10 +12,21 @@
  * Configure once with `test.use({ a11yConfig: { policy: "wcag22-aa" } })` or
  * per call with the second argument. Under `reducedMotion: "reduce"` the
  * motion audit runs too, so a `matrix()` with a reduce cell covers it.
+ *
+ * Warnings (findings above the policy level) never fail a test, but they are
+ * printed to the test's output as `[ramp-check] warn: ...` lines so a green
+ * run still shows them; set `a11yConfig: { reportWarnings: "quiet" }` to keep
+ * them in the attachment and annotations only. `check()` also returns the
+ * full result, so `result.warnings` is there for programmatic use.
+ *
+ * Already have a `page` fixture that logs in? Extend THIS `test`, not
+ * Playwright's: `const myTest = test.extend({ page: async ({ page }, use) => { await login(page); await use(page); } })`.
+ * Extending the wrong base shows up at runtime as
+ * "Test has unknown parameter 'a11y'".
  */
 import { test as base, expect } from "@playwright/test";
 import { motionRuntime } from "../checks/motion.js";
-import { classify, failures, runChecks } from "../run.js";
+import { classify, failures, formatFinding, runChecks } from "../run.js";
 import { matrix } from "./matrix.js";
 
 /** @typedef {import("../run.js").RampCheckConfig} RampCheckConfig */
@@ -66,9 +77,7 @@ export const test = base.extend(
             body: JSON.stringify(result, null, 2),
             contentType: "application/json",
           });
-          for (const w of result.warnings) {
-            testInfo.annotations.push({ type: "a11y-warning", description: `${label}: ${w.rule}: ${w.target}` });
-          }
+          reportWarnings(label, result, merge(a11yConfig, overrides));
           for (const e of result.unused) {
             testInfo.annotations.push({
               type: "a11y-allowlist-unused",
@@ -85,12 +94,26 @@ export const test = base.extend(
             body: JSON.stringify(result, null, 2),
             contentType: "application/json",
           });
-          for (const w of result.warnings) {
-            testInfo.annotations.push({ type: "a11y-warning", description: `${label}: ${w.rule}: ${w.target}` });
-          }
+          reportWarnings(label, result, merge(a11yConfig, overrides));
           expect(failures(result), `${label}: accessibility findings (policy ${result.policy})`).toEqual([]);
         },
       };
+
+      /**
+       * Annotate every warning and, unless quiet, print it so a passing run
+       * still shows what is above the policy level.
+       * @param {string} label
+       * @param {{ warnings: import("../types.js").Finding[], policy: string }} result
+       * @param {RampCheckConfig} config
+       */
+      function reportWarnings(label, result, config) {
+        for (const w of result.warnings) {
+          testInfo.annotations.push({ type: "a11y-warning", description: `${label}: ${w.rule}: ${w.target}` });
+        }
+        if (config.reportWarnings === "quiet" || !result.warnings.length) return;
+        console.warn(`[ramp-check] ${label}: ${result.warnings.length} warning${result.warnings.length === 1 ? "" : "s"} above policy ${result.policy}`);
+        for (const w of result.warnings) console.warn(`[ramp-check] warn: ${formatFinding(w)}`);
+      }
       await use(api);
     },
   }),
@@ -110,6 +133,17 @@ function merge(base, overrides) {
     motion: { ...base.motion, ...overrides.motion },
     reflow: { ...base.reflow, ...overrides.reflow },
   };
+}
+
+/**
+ * Assert a `runChecks()` result is clean, for specs that drive the checks
+ * directly instead of through the `a11y` fixture. Fails with one line per
+ * blocking finding and per expired allowlist entry.
+ * @param {CheckResult} result
+ * @param {string} [label]
+ */
+export function expectClean(result, label = result.label || "page") {
+  expect(failures(result), `${label}: accessibility findings (policy ${result.policy})`).toEqual([]);
 }
 
 /**

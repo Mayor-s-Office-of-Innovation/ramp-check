@@ -422,6 +422,7 @@ export async function keyboardAudit(page, opts = {}) {
       contextChange = {
         check: "keyboard",
         rule: "focus-changes-context",
+        technique: "F52",
         target: culprit,
         message: `the page navigated to ${page.url()} when focus reached ${culprit} or the next Tab stop; receiving focus must not change context`,
         wcag: { criterion: "3.2.1", level: "A", version: "2.0" },
@@ -507,6 +508,7 @@ export async function keyboardAudit(page, opts = {}) {
       add({
         check: "keyboard",
         rule: "positive-tabindex",
+        technique: "F44",
         target: c.path,
         message: `tabindex="${c.tabindex}" pulls this element out of document order; use tabindex="0" and reorder the markup instead`,
         wcag: { criterion: "2.4.3", ...A },
@@ -556,6 +558,7 @@ export async function keyboardAudit(page, opts = {}) {
         add({
           check: "keyboard",
           rule: "focus-obscured",
+        technique: "F110",
           target: s.path,
           message: "entirely hidden behind other content when focused (sticky header, banner, or overlay)",
           wcag: { criterion: "2.4.11", level: "AA", version: "2.2" },
@@ -570,6 +573,7 @@ export async function keyboardAudit(page, opts = {}) {
       add({
         check: "keyboard",
         rule: "focus-not-visible",
+        technique: "F78",
         target: s.path,
         message: "no visible change when focused (computed styles unchanged and pixels identical)",
         wcag: { criterion: "2.4.7", level: "AA", version: "2.0" },
@@ -596,6 +600,7 @@ export async function keyboardAudit(page, opts = {}) {
       add({
         check: "keyboard",
         rule: "focus-obscured",
+        technique: "F110",
         target: s.path,
         message: "entirely hidden behind other content when focused (sticky header, banner, or overlay)",
         wcag: { criterion: "2.4.11", level: "AA", version: "2.2" },

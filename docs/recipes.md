@@ -24,6 +24,15 @@ export { expect } from "ramp-check/test";
 The motion runtime is installed on the browser context, so it is in place
 even though your `page` override navigates before the test body runs.
 
+Set config once at file level; it applies to every matrix cell in the file:
+
+```js
+test.use({ a11yConfig: { policy: "wcag22-aa", allowlist: "./a11y-allowlist.json" } });
+```
+
+If a test fails with "Test has unknown parameter 'a11y'", the spec extended
+Playwright's `test` instead of ramp-check's.
+
 ## Themes and reduced motion in one file
 
 ```js

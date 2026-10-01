@@ -56,8 +56,8 @@
     "test": "playwright test",
     "typecheck": "tsc --noEmit",
     "build:types": "tsc",
-    "prepack": "npm run build:types",
-    "smoke": "bash scripts/smoke.sh"
+    "smoke": "bash scripts/smoke.sh",
+    "prepare": "npm run build:types"
   },
   "keywords": [
     "accessibility",

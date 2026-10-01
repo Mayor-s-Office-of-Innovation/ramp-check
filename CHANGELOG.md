@@ -28,3 +28,8 @@ First public release.
   `expectAnnouncement`, `formErrorAudit`; `a11y.assert` on the fixture.
 - ESLint preset (`ramp-check/eslint`) for smooth scroll and view transitions.
 - Matrix axis validation; recipes doc.
+- Adopter feedback: types build in `prepare` so git installs get types;
+  warnings printed on passing runs (`reportWarnings`); `expectClean` and
+  documented `failures()` for direct `runChecks` use; composition recipe with
+  the "unknown parameter 'a11y'" callout; WCAG technique ids (F78, F44, F110,
+  F52) on keyboard findings.

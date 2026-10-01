@@ -27,6 +27,7 @@
  * @property {string} message    one line a person can act on
  * @property {WcagRef} wcag
  * @property {string} [help]     URL with more detail
+ * @property {string} [technique] WCAG failure or sufficient technique id the rule maps to, e.g. "F78"
  * @property {Severity} [severity]  set by the policy, not by the check
  * @property {AllowlistEntry} [allowlisted]  set when an allowlist entry covers it
  * @property {import("./checks/baseline.js").BaselineEntry} [baselined]  set when a baseline entry covers it

@@ -79,6 +79,39 @@ a11yMatrix(
 );
 ```
 
+### You already have fixtures or a login flow
+
+Extend ramp-check's `test`, not Playwright's, and keep your `page` override.
+Pass your extended test to `matrix()`; `a11yMatrix` is the shortcut for the
+plain-page case.
+
+```js
+import { test as base, matrix } from "ramp-check/test";
+import { login } from "./helpers/app.js";
+
+export const test = base.extend({
+  page: async ({ page }, use) => {
+    await login(page);
+    await use(page);
+  },
+});
+
+test.use({ a11yConfig: { policy: "wcag22-aa", allowlist: "./a11y-allowlist.json" } }); // one call covers every cell
+
+matrix({ colorScheme: ["light", "dark"], reducedMotion: ["reduce"] }, (cell) => {
+  test(`dashboard (${cell.name})`, async ({ page, a11y }) => {
+    await a11y.check("dashboard");
+  });
+}, { test });
+```
+
+If a test fails with **"Test has unknown parameter 'a11y'"**, the spec extended
+Playwright's `test` instead of ramp-check's. Change the import.
+
+Warnings never fail a test, but a passing run prints them as
+`[ramp-check] warn:` lines so findings above your policy stay visible. Set
+`a11yConfig: { reportWarnings: "quiet" }` to keep them in annotations only.
+
 ## Patterns: dialogs, focus, announcements, form errors
 
 Some checks need an action only a spec author knows. `ramp-check/patterns`
@@ -205,11 +238,17 @@ Every check is a plain function that takes a Playwright `page` at the state
 to test and returns findings.
 
 ```js
-import { axeScan, motionAudit, reflowCheck, runChecks } from "ramp-check";
+import { axeScan, motionAudit, reflowCheck, runChecks, failures } from "ramp-check";
+import { expectClean } from "ramp-check/test";
 
 const { findings } = await motionAudit(page);          // needs reducedMotion: "reduce"
 const result = await runChecks(page, { policy: "wcag22-aa" }, { reducedMotion: true });
+expectClean(result, "checkout");                       // or: expect(failures(result)).toEqual([])
 ```
+
+`failures(result)` returns one line per blocking finding and per expired
+allowlist entry; empty means clean. `expectClean` wraps it in a Playwright
+assertion.
 
 The motion audit only sees animations still running when it is called, so
 call it right after the action you want to audit. View transitions are the

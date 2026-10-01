@@ -53,6 +53,7 @@ with `reducedMotion: "reduce"`.
 | `checks` | object | all `"auto"`, `textSpacing: "warn"` | Per-check mode: `auto`, `block`, `warn`, `off`. Keys: `axe`, `motion`, `reflow`, `keyboard`, `textSpacing`. |
 | `tags` | string[] | | Escape hatch: raw axe tags, replaces the derived list. |
 | `disableRules` | string[] | | axe rule ids to skip entirely. Prefer the allowlist. |
+| `reportWarnings` | `"log" \| "quiet"` | `"log"` | Fixtures only: print warnings to the test output on passing runs. |
 
 ## Check options
 

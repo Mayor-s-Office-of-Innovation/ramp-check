@@ -32,6 +32,7 @@ import { resolvePolicy, severityFor } from "./policy.js";
  * @property {string[]} [tags]       escape hatch: raw axe tags (see docs/config.md)
  * @property {string[]} [disableRules]  axe rule ids to skip entirely; prefer the allowlist
  * @property {string | AllowlistEntry[]} [allowlist]  path to JSON, or inline entries
+ * @property {"log" | "quiet"} [reportWarnings]  fixtures only: print warnings to the test output (default "log")
  */
 
 /**
@@ -151,7 +152,8 @@ export function classify(findings, config = {}, ctx = {}) {
  * @param {Finding} f
  */
 export function formatFinding(f) {
-  const ref = f.wcag.level === "best-practice" ? "best practice" : `${f.wcag.criterion} ${f.wcag.level}`;
+  let ref = f.wcag.level === "best-practice" ? "best practice" : `${f.wcag.criterion} ${f.wcag.level}`;
+  if (f.technique) ref += `, ${f.technique}`;
   return `${f.rule}: ${f.target} (${f.message}) [${ref}]`;
 }
 
