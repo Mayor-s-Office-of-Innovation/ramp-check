@@ -11,7 +11,7 @@
 export const MARKDOWN_MARKER = "<!-- ramp-check-report -->";
 
 /** @param {string} s */
-const code = (s) => `\`${s.replace(/`/g, "'")}\``;
+const code = (s) => `\`${s.replace(/`/g, "'").replace(/\|/g, "\\|")}\``;
 
 /**
  * @param {SiteReport} r
@@ -76,7 +76,12 @@ function row(l) {
   return `| ${where(l)} | ${code(f.rule)} | ${code(f.target)} | ${ref} | ${detail} |`;
 }
 
-/** Escape for a table cell. @param {string} s */
+/**
+ * Escape for a table cell. Titles, selectors and messages come from the page
+ * under test, and this text lands in a pull-request comment, so HTML is
+ * neutralised too.
+ * @param {string} s
+ */
 function cell(s) {
-  return s.replace(/\|/g, "\\|").replace(/\n/g, " ");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\|/g, "\\|").replace(/\n/g, " ");
 }

@@ -10,7 +10,8 @@
  * Exit codes: 0 clean, 1 findings or expired exceptions, 2 usage or config error.
  */
 import { parseArgs } from "node:util";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { findConfig, loadConfig } from "./config.js";
 import { runSite } from "./run.js";
@@ -114,8 +115,10 @@ export async function main(argv, io = {}) {
   return report.ok ? 0 : 1;
 }
 
-// Run when invoked directly (bin), not when imported by tests.
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+// Run when invoked directly (bin), not when imported by tests. The installed
+// bin is a symlink, so compare real paths.
+const invoked = process.argv[1] ? pathToFileURL(realpathSync(process.argv[1])).href : "";
+if (invoked === import.meta.url) {
   main(process.argv.slice(2)).then((code) => {
     process.exitCode = code;
   });

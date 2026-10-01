@@ -26,3 +26,14 @@ test.describe("site consistency", () => {
     ])).toEqual([]);
   });
 });
+
+test("markdown report neutralises HTML and pipes from page content", async () => {
+  const { markdownReport } = await import("../src/cli/report-markdown.js");
+  const md = markdownReport({
+    generated: "", policy: "wcag-aaa", baseURL: "", states: [], consistency: [], warnings: [], allowlisted: [], baselined: [],
+    expiredAllowlist: [], expiredBaseline: [], staleBaseline: [], expiringSoon: [], errors: [], ok: false, baselineWritten: null,
+    failing: [{ page: "/x", cell: "", finding: { check: "consistency", rule: "duplicate-page-title", target: "/x", message: 'title "<img src=x onerror=alert(1)> | b" is shared', wcag: { criterion: "2.4.2", level: "A", version: "2.0" } } }],
+  });
+  expect(md).not.toContain("<img");
+  expect(md).toContain("&lt;img src=x onerror=alert(1)&gt; \\| b");
+});

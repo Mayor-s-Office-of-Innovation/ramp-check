@@ -91,7 +91,10 @@ runs:
         retention-days: 30
 
     - name: Comment on the pull request
+      # Fork pull requests get a read-only token; a failed comment must not
+      # mask the real result, which the step summary and artifact still carry.
       if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      continue-on-error: true
       uses: actions/github-script@v7
       env:
         REPORT: ${{ steps.run.outputs.out }}/ramp-check.md
