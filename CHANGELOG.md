@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Obscured-focus sampling no longer counts the element's own ancestors as
+  occluders (`elementFromPoint` at a link inside a paragraph hit the
+  paragraph, which contains the link — reported as focus-obscured). An
+  occluder is something other than the element, its descendants, or its
+  ancestors. Obscured reads are re-verified once after a 300 ms settle
+  before being reported; the persisted value ships in the finding's data.
+- Focus visibility crosses shadow boundaries: the shadow hosts' computed
+  styles join the diff (`:host(:focus)`, `:host(:focus-within)`) and the
+  screenshot fallback covers the outermost host's box, so a delegated-focus
+  widget's surrogate ring (OTP segments, a pill field) is a visible
+  indicator; a proxy's never-rendered thin UA outline alone is reported as
+  `focus-indicator-thin`. Fixture: fixtures/keyboard-delegated-focus.html.
+
 ## 0.1.0
 
 First public release.

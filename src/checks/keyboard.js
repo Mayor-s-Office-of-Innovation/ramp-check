@@ -17,12 +17,19 @@
  * - focus-not-visible (2.4.7 AA): the focused element's computed outline,
  *   box-shadow, border, background, color and text-decoration all match its
  *   resting state, and a padded screenshot of it is byte-identical before
- *   and after focus.
+ *   and after focus. When focus crosses a shadow boundary, the shadow hosts'
+ *   computed styles join the diff (a delegated-focus widget may draw its ring
+ *   on a surrogate — segments, a field—rather than the proxy input) and the
+ *   screenshot region covers the outermost host.
  * - focus-indicator-thin (2.4.13 AAA, heuristic): the only visible change is
  *   an outline under 2 CSS px.
  * - focus-obscured (2.4.11 AA, WCAG 2.2) and focus-partially-obscured
  *   (2.4.12 AAA): `elementFromPoint` at the focused element's centre and
- *   corners resolves to something else, as under a sticky header or banner.
+ *   corners resolves to something other than the element, its descendants,
+ *   or its ancestors (an own-paragraph or inner-span hit is the element's
+ *   rendering, not an overlay), as under a sticky header or banner. Each
+ *   obscured read is re-verified once after a 300 ms settle before being
+ *   reported.
  * - skip-link-broken (2.4.1 A): the first Tab stop is a skip link whose
  *   activation does not move focus into its target.
  * - focus-changes-context (3.2.1 A): receiving focus navigated the page.
@@ -68,6 +75,9 @@
  * @property {"none" | "partial" | "full" | "unknown"} obscured
  * @property {{ x: number, y: number, width: number, height: number } | null} rect  viewport-relative
  * @property {boolean} screenshotChanged  set by the fallback when styles did not change
+ * @property {boolean} hostStyleDiff  a shadow ancestor's computed styles changed on focus (delegated-focus surrogate ring)
+ * @property {{ x: number, y: number, width: number, height: number } | null} hostRect  the outermost shadow host's rect, for the screenshot fallback
+ * @property {"none" | "partial" | "full" | "unknown"} [obscuredRecheck]  persisted obscured value after a settle; absent when not re-checked, "none" demotes the step
  */
 
 /**
@@ -201,11 +211,30 @@ function keyboardRuntime({ props }) {
     for (const p of props) out[p] = cs.getPropertyValue(p);
     return out;
   }
+  /** True when `other` is a strict descendant of `el` (el.contains(other) but not el itself). @param {Element} el @param {Element} other */
+  function containsExcludingSelf(el, other) {
+    return el !== other && el.contains(other);
+  }
+  /** The chain of shadow hosts from el's tree up to the document, outermost first. @param {Element} el */
+  function hostChain(el) {
+    /** @type {Element[]} */
+    const out = [];
+    let root = /** @type {Document | ShadowRoot} */ (el.getRootNode());
+    while (root instanceof ShadowRoot) {
+      out.unshift(root.host);
+      root = /** @type {Document | ShadowRoot} */ (root.host.getRootNode());
+    }
+    return out;
+  }
 
   /** @type {Element[]} */
   let elements = [];
   /** @type {Record<string, string>[]} */
   let resting = [];
+  /** @type {Element[][]} */
+  let restingHosts = [];
+  /** @type {Record<string, string>[][]} */
+  let restingHostStyles = [];
   /** @type {Element | null} */
   let savedActive = null;
 
@@ -247,6 +276,9 @@ function keyboardRuntime({ props }) {
       const radio = el instanceof HTMLInputElement && el.type === "radio" && el.name ? `${pathFor(el.form ?? document.body)}|${el.name}` : null;
       elements.push(el);
       resting.push(snapshot(el));
+      const hosts = hostChain(el);
+      restingHosts.push(hosts);
+      restingHostStyles.push(hosts.map((h) => snapshot(h)));
       candidates.push({
         index: elements.length - 1,
         path: pathFor(el),
@@ -266,11 +298,14 @@ function keyboardRuntime({ props }) {
   function step() {
     const el = deepActive();
     if (!el || el === document.body || el === document.documentElement) {
-      return { index: -1, path: "body", isBody: true, isFrame: false, styleDiff: [], outlineWidth: 0, obscured: "unknown", rect: null, screenshotChanged: false };
+      return { index: -1, path: "body", isBody: true, isFrame: false, styleDiff: [], outlineWidth: 0, obscured: "unknown", rect: null, screenshotChanged: false, hostStyleDiff: false, hostRect: null };
     }
     const index = elements.indexOf(el);
     const styleDiff = [];
     let outlineWidth = 0;
+    let hostStyleDiff = false;
+    /** @type {{ x: number, y: number, width: number, height: number } | null} */
+    let hostRect = null;
     if (index >= 0) {
       const now = snapshot(el);
       const before = resting[index];
@@ -284,6 +319,22 @@ function keyboardRuntime({ props }) {
       }
       if (outlineVisible(now) && styleDiff.some((p) => p.startsWith("outline"))) {
         outlineWidth = Number.parseFloat(now["outline-width"]) || 0;
+      }
+      // A delegated-focus widget shows focus on a surrogate inside its shadow
+      // tree, not on the proxy element Tab lands on. The hosts' own computed
+      // styles change via :host(:focus)/:host(:focus-within) rules.
+      const hosts = restingHosts[index];
+      for (let h = 0; h < hosts.length; h++) {
+        const hostNow = snapshot(hosts[h]);
+        const hostBefore = restingHostStyles[index][h];
+        if (props.some((p) => hostNow[p] !== hostBefore[p])) {
+          hostStyleDiff = true;
+          break;
+        }
+      }
+      if (hosts.length) {
+        const hr = hosts[0].getBoundingClientRect();
+        hostRect = { x: hr.x, y: hr.y, width: hr.width, height: hr.height };
       }
     }
     const r = el.getBoundingClientRect();
@@ -307,7 +358,11 @@ function keyboardRuntime({ props }) {
       let covered = 0;
       for (const [x, y] of points) {
         const hit = root.elementFromPoint(x, y);
-        if (!hit || (hit !== el && !el.contains(hit))) covered++;
+        // An occluder is something OTHER than the element, its descendants,
+        // or its ancestors: a hit on the element's own paragraph/link chain
+        // (parent/ancestor contains el) is the element's rendering, not
+        // content stacked on top of it.
+        if (!hit || (!containsExcludingSelf(el, hit) && !hit.contains(el))) covered++;
       }
       obscured = covered === 0 ? "none" : covered === points.length ? "full" : "partial";
     }
@@ -321,6 +376,8 @@ function keyboardRuntime({ props }) {
       obscured,
       rect: { x: r.x, y: r.y, width: r.width, height: r.height },
       screenshotChanged: false,
+      hostStyleDiff,
+      hostRect,
     };
   }
 
@@ -341,6 +398,48 @@ function keyboardRuntime({ props }) {
     /** @param {number} index */
     focus(index) {
       /** @type {any} */ (elements[index])?.focus?.();
+    },
+    /**
+     * Re-run the obscured sampling of a recorded step: focus the element,
+     * then — after a settle on a page-timer schedule — hit-test again.
+     * Two Chromium realities make a re-check necessary: at the instant
+     * focus arrives, a pending style/layout update can hit-test against a
+     * half-updated tree, and a protocol-driven read between frames can see
+     * a stale hit-test tree for up to about a second on an idle headless
+     * page. Reads on the page's own timer schedule (setTimeout) see the
+     * committed state; a real overlay (sticky header, banner) persists,
+     * a stale-tree read does not. Returns the persisted obscured value,
+     * or null if the element is gone (document replaced).
+     * @param {number} index
+     * @param {number} settleMs  time to wait after focus, timer-scheduled
+     * @returns {Promise<FocusStep["obscured"] | null>}
+     */
+    async recheck(index, settleMs) {
+      const el = /** @type {any} */ (elements[index]);
+      if (!el || !el.isConnected) return null;
+      el.focus();
+      await new Promise((r) => setTimeout(r, settleMs));
+      if (!el.isConnected) return null;
+      const r = el.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
+      const qx = r.width / 4;
+      const qy = r.height / 4;
+      const points = [
+        [r.x + r.width / 2, r.y + r.height / 2],
+        [r.x + qx, r.y + qy],
+        [r.right - qx, r.y + qy],
+        [r.x + qx, r.bottom - qy],
+        [r.right - qx, r.bottom - qy],
+      ].filter(([x, y]) => x >= 0 && y >= 0 && x < vw && y < vh);
+      if (!points.length || r.width <= 0 || r.height <= 0) return "unknown";
+      const root = /** @type {Document | ShadowRoot} */ (el.getRootNode());
+      let covered = 0;
+      for (const [x, y] of points) {
+        const hit = root.elementFromPoint(x, y);
+        if (!hit || (!containsExcludingSelf(el, hit) && !hit.contains(el))) covered++;
+      }
+      return covered === 0 ? "none" : covered === points.length ? "full" : "partial";
     },
     /** Describe the first Tab stop as a potential skip link. */
     skipLinkInfo() {
@@ -461,7 +560,21 @@ export async function keyboardAudit(page, opts = {}) {
       terminated = wrapped ? "end" : "cycle";
       break;
     }
-    if (step.index >= 0 && step.styleDiff.length === 0 && useScreenshots && !step.isFrame) {
+    if (step.index >= 0 && step.styleDiff.length === 0 && !step.hostStyleDiff && useScreenshots && !step.isFrame) {
+      step.screenshotChanged = await screenshotChanges(page, step);
+    } else if (
+      step.index >= 0 &&
+      step.hostRect &&
+      step.styleDiff.length > 0 &&
+      step.styleDiff.every((p) => p.startsWith("outline")) &&
+      step.outlineWidth < 2 &&
+      useScreenshots &&
+      !step.isFrame
+    ) {
+      // A shadow-tree proxy can carry a UA thin outline it never renders
+      // (1×1, opacity 0). The style layer says "thin indicator"; the pixel
+      // layer over the host region sees the widget's real surrogate ring.
+      // Pixels win: a changed region upgrades thin → visible.
       step.screenshotChanged = await screenshotChanges(page, step);
     }
     sequence.push(step);
@@ -549,6 +662,25 @@ export async function keyboardAudit(page, opts = {}) {
     });
   }
 
+  // Obscured steps get a persistence re-check: refocus, settle 300 ms on
+  // the page's timer schedule, and hit-test again. A real overlay (sticky
+  // header, banner, dialog sheet) persists; a one-frame layout/transition
+  // race at the instant focus arrived does not. A demoted read stays
+  // visible in the step's data — never dropped silently.
+  const obscuredSteps = sequence.filter((s) => !s.isFrame && (s.obscured === "full" || s.obscured === "partial"));
+  for (const s of obscuredSteps) {
+    const persisted = /** @type {FocusStep["obscured"] | null} */ (
+      await page.evaluate(
+        ([i, ms]) => /** @type {any} */ (window).__rampCheckKeyboard.recheck(i, ms),
+        [s.index, 300],
+      )
+    );
+    if (persisted !== null) {
+      s.obscuredRecheck = persisted === "none" ? "none" : persisted;
+      if (persisted === "none") s.obscured = "none";
+    }
+  }
+
   for (const s of sequence) {
     if (s.index < 0) continue;
     // Focus inside an iframe belongs to the frame's own document; its
@@ -568,7 +700,7 @@ export async function keyboardAudit(page, opts = {}) {
       }
       continue;
     }
-    const visibleChange = s.styleDiff.length > 0 || s.screenshotChanged;
+    const visibleChange = s.styleDiff.length > 0 || s.screenshotChanged || s.hostStyleDiff;
     if (!visibleChange) {
       add({
         check: "keyboard",
@@ -581,6 +713,8 @@ export async function keyboardAudit(page, opts = {}) {
         data: { styleDiff: s.styleDiff },
       });
     } else if (
+      !s.hostStyleDiff &&
+      !s.screenshotChanged &&
       s.styleDiff.length &&
       s.styleDiff.every((p) => p.startsWith("outline")) &&
       s.outlineWidth > 0 &&
@@ -605,7 +739,7 @@ export async function keyboardAudit(page, opts = {}) {
         message: "entirely hidden behind other content when focused (sticky header, banner, or overlay)",
         wcag: { criterion: "2.4.11", level: "AA", version: "2.2" },
         help: `${understanding}focus-not-obscured-minimum.html`,
-        data: { rect: s.rect },
+        data: { rect: s.rect, obscuredRecheck: s.obscuredRecheck },
       });
     } else if (s.obscured === "partial") {
       add({
@@ -615,7 +749,7 @@ export async function keyboardAudit(page, opts = {}) {
         message: "partly hidden behind other content when focused",
         wcag: { criterion: "2.4.12", level: "AAA", version: "2.2" },
         help: `${understanding}focus-not-obscured-enhanced.html`,
-        data: { rect: s.rect },
+        data: { rect: s.rect, obscuredRecheck: s.obscuredRecheck },
       });
     }
   }
@@ -674,17 +808,21 @@ export async function keyboardAudit(page, opts = {}) {
 
 /**
  * Pixel fallback for focus visibility: blur, shoot, refocus, shoot, compare.
+ * When focus sits inside a shadow tree, the region is the outermost host's
+ * rect — the widget's surrogate indicator lives there, not on the 1×1 proxy
+ * input Tab lands on.
  * @param {Page} page
  * @param {FocusStep} step
  */
 async function screenshotChanges(page, step) {
-  if (!step.rect) return false;
+  const region = step.hostRect ?? step.rect;
+  if (!region) return false;
   const viewport = page.viewportSize() ?? { width: 1280, height: 720 };
   const pad = 8;
-  const x = Math.max(0, step.rect.x - pad);
-  const y = Math.max(0, step.rect.y - pad);
-  const width = Math.min(viewport.width - x, step.rect.width + pad * 2);
-  const height = Math.min(viewport.height - y, step.rect.height + pad * 2);
+  const x = Math.max(0, region.x - pad);
+  const y = Math.max(0, region.y - pad);
+  const width = Math.min(viewport.width - x, region.width + pad * 2);
+  const height = Math.min(viewport.height - y, region.height + pad * 2);
   if (width <= 0 || height <= 0) return false;
   const clip = { x, y, width, height };
   await page.evaluate(() => /** @type {any} */ (window).__rampCheckKeyboard.blur());

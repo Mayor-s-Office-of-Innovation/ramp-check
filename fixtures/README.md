@@ -15,6 +15,7 @@ it still catches it. A check without a page here is not done.
 | `keyboard-unreachable.html` | keyboard | A div with onclick, a span with role="button" and no tabindex, a link with tabindex="-1", a button with tabindex="2". |
 | `keyboard-trap.html` | keyboard | An input that swallows Tab. |
 | `keyboard-focus-invisible.html` | keyboard | A button with no focus indicator, one with a 1 px outline, one with a proper box-shadow ring. |
+| `keyboard-delegated-focus.html` | keyboard | OTP-style widgets whose visible ring is drawn on a surrogate segment while Tab lands on a 1×1 invisible proxy input (`delegatesFocus`). Must stay quiet. One ringless widget must still fail. |
 | `keyboard-focus-obscured.html` | keyboard | Links fully and partly under an 80 px fixed banner. |
 | `keyboard-skip-link.html` | keyboard | A skip link whose target id does not exist. |
 | `keyboard-no-skip-link.html` | keyboard | Five nav links before main and no skip link. |
