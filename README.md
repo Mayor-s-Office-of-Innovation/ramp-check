@@ -9,12 +9,11 @@
  |_| \_\/_/   \_\_|  |_|_|      \____|_| |_|_____\____|_|\_\
 </pre>
 
-Automated accessibility checks for Playwright, built so any government
-team can add them to CI in minutes.
+Automated accessibility checks for Playwright, easy to add to CI.
 
 Everything axe checks, plus the things axe structurally cannot: motion
 (does the page honor reduced motion?), keyboard (can you reach everything?),
-reflow (does it fit a narrow screen?), and consistency across pages.
+reflow (does it fit a narrow screen?).
 
 Status: phase 0. The core checks and Playwright fixtures work; the
 config-driven CLI, the keyboard audit, and the GitHub Action are next.
@@ -78,23 +77,17 @@ test.use({ a11yConfig: { policy: "wcag22-aa" } });
 | `wcag22-aa` | WCAG 2.2 A and AA | AAA findings, including the motion audit (2.3.3) |
 | `wcag21-aa` | WCAG 2.1 A and AA | everything WCAG 2.2 added, and AAA |
 
-Warnings are always reported; nothing is silently dropped. Per-check
+Warnings are always reported. Per-check
 overrides let you keep one thing stricter than the policy, for example
 `checks: { motion: "block" }` under an AA policy.
 
-Why default high: a team that starts at the top and consciously steps down
-knows what it gave up. A team that starts at the floor rarely climbs. In
+In
 practice, AAA with axe-core 4.13 means the 7:1 enhanced contrast rule, two
-rarely-triggered rules, and this tool's motion audit becoming blocking; it
-is not a wall of new failures. W3C itself says AAA is "not recommended as a
-general policy for entire sites," so treat the default as a stretch target you
-may legitimately lower.
+rarely-triggered rules, and this tool's motion audit becoming blocking.
 
 Legal context: the DOJ's ADA Title II rule holds state and local governments
 to WCAG 2.1 AA, with compliance dates in April 2026 for large entities and
-April 2027 for the rest. Many jurisdictions have their own digital
-accessibility standards that require the same level. So `wcag21-aa` is the
-floor, `wcag22-aa` the sensible step-down, and `wcag-aaa` the default.
+April 2027 for the rest.
 
 Details and the ADA references: [docs/conformance-level.md](docs/conformance-level.md).
 
@@ -113,9 +106,9 @@ under [test/](test/) proving it fires.
 
 ## Exceptions: the allowlist
 
-There are no silent filters. Every exception is an entry with a rule, a
-target, a reason, and an expiry date, and an expired entry fails the run by
-name until someone renews or removes it.
+Every exception is an entry with a rule, a
+target, a reason, and an expiry date. An expired entry fails the run by
+name until removed.
 
 ```json
 [
@@ -137,7 +130,7 @@ See [docs/allowlist.md](docs/allowlist.md).
 ## Using the checks directly
 
 Every check is a plain function that takes a Playwright `page` at the state
-to test and returns findings. No fixture needed.
+to test and returns findings.
 
 ```js
 import { axeScan, motionAudit, reflowCheck, runChecks } from "ramp-check";
@@ -153,12 +146,12 @@ exception: the fixtures install a page init script that records every
 
 ## What this does not catch
 
-Automated tools find roughly a third of accessibility problems. This tool
+Automated tools find a fraction accessibility problems. This tool
 covers axe's share plus motion, reflow, and (soon) keyboard operation. It
 does not test screen-reader output, content quality, timing, or whether a
 flow makes sense. Most government accessibility standards require manual
 testing and testing with people with disabilities as well; a green run here
-is a prerequisite, not compliance. A manual checklist will ship with 1.0.
+is a prerequisite, not compliance.
 
 ## Roadmap
 
