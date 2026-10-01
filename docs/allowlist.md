@@ -22,11 +22,11 @@ file, one per project, and every entry has four required fields:
 
 | Field | Meaning |
 | --- | --- |
-| `rule` | the rule id from the finding: an axe rule id, or one of this tool's (`reduced-motion-ignored`, `infinite-animation`, `view-transition-animates`, `reflow-horizontal-scroll`) |
+| `rule` | the rule id from the finding: an axe rule id, or one of this tool's (`reduced-motion-ignored`, `infinite-animation`, `view-transition-animates`, `reflow-horizontal-scroll`, and the keyboard rules in [keyboard.md](keyboard.md)) |
 | `target` | the finding's target string exactly, or a prefix ending in `*`. Shadow boundaries are written ` >>> `. View transitions are `::view-transition(<names>)`. |
 | `reason` | why this is acceptable for now; shows up in reports |
 | `expires` | ISO date. On the day after, the entry stops suppressing and the run fails naming it. |
-| `check` (optional) | `axe`, `motion`, or `reflow`, when a rule id could be ambiguous |
+| `check` (optional) | `axe`, `motion`, `reflow`, `keyboard`, `textSpacing`, `consistency`, or `pattern`, when a rule id could be ambiguous |
 
 Point the config at it:
 

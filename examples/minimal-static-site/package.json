@@ -1,0 +1,14 @@
+{
+  "name": "minimal-static-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node serve.js",
+    "a11y": "ramp-check",
+    "a11y:baseline": "ramp-check baseline"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "ramp-check": "^0.1.0"
+  }
+}

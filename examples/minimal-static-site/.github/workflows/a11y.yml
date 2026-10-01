@@ -1,0 +1,20 @@
+name: Accessibility
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  a11y:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: (npm run serve &) && sleep 2
+      - uses: Mayor-s-Office-of-Innovation/ramp-check/action@main
+        with:
+          config: ramp-check.config.js

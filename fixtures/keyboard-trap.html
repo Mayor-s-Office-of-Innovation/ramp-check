@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: trap</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
+    .skip:focus { left: 1rem; }
+    input { font: inherit; padding: .5rem; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Keyboard</a> <a href="/axe-contrast.html">Contrast</a> <a href="/reflow-overflow.html">Reflow</a> <a href="/motion-guarded.html">Motion</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <h1>Keyboard trap</h1>
+    <p>The tag input swallows Tab to add a tag, so focus can never leave it. The button after it is unreachable as a consequence.</p>
+    <p><label for="tags">Tags</label> <input id="tags" type="text"></p>
+    <p><button type="button" id="after-trap">Save</button></p>
+  </main>
+  <footer><p>Fixture for ramp-check.</p></footer>
+  <script>
+    document.getElementById("tags").addEventListener("keydown", (e) => {
+      if (e.key === "Tab") e.preventDefault(); // seeded defect
+    });
+  </script>
+</body>
+</html>

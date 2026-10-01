@@ -55,6 +55,7 @@ export function matrix(axes, body, opts = {}) {
  * @returns {MatrixCell[]}
  */
 export function cells(axes) {
+  validateAxes(axes);
   const keys = /** @type {(keyof MatrixAxes)[]} */ (Object.keys(axes)).filter(
     (k) => Array.isArray(axes[k]) && /** @type {unknown[]} */ (axes[k]).length > 0,
   );
@@ -85,4 +86,40 @@ export function cells(axes) {
     cell.name = labels.join(", ");
     return cell;
   });
+}
+
+const ALLOWED = /** @type {Record<string, string[] | null>} */ ({
+  colorScheme: ["light", "dark", "no-preference"],
+  reducedMotion: ["reduce", "no-preference"],
+  forcedColors: ["active", "none"],
+  viewport: null, // names from VIEWPORTS or { width, height }
+});
+
+/**
+ * Fail loudly on a typo: a misspelled axis or value would otherwise silently
+ * shrink coverage.
+ * @param {MatrixAxes} axes
+ */
+export function validateAxes(axes) {
+  const problems = [];
+  for (const [key, values] of Object.entries(axes)) {
+    if (!(key in ALLOWED)) {
+      problems.push(`unknown axis "${key}" (allowed: ${Object.keys(ALLOWED).join(", ")})`);
+      continue;
+    }
+    if (!Array.isArray(values)) {
+      problems.push(`axis "${key}" must be an array`);
+      continue;
+    }
+    for (const v of values) {
+      if (key === "viewport") {
+        const ok = (typeof v === "string" && v in VIEWPORTS) || (typeof v === "object" && v !== null && v.width > 0 && v.height > 0);
+        if (!ok) problems.push(`viewport ${JSON.stringify(v)} is not one of ${Object.keys(VIEWPORTS).join(", ")} or { width, height }`);
+      } else if (!ALLOWED[key]?.includes(/** @type {string} */ (v))) {
+        problems.push(`${key} value ${JSON.stringify(v)} is not one of ${ALLOWED[key]?.join(", ")}`);
+      }
+    }
+    if (new Set(values.map((v) => JSON.stringify(v))).size !== values.length) problems.push(`axis "${key}" has duplicate values`);
+  }
+  if (problems.length) throw new Error(`Invalid matrix:\n  ${problems.join("\n  ")}`);
 }

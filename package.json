@@ -1,6 +1,6 @@
 {
   "name": "ramp-check",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Automated accessibility checks for Playwright: everything axe checks, plus motion, keyboard, reflow, and cross-page consistency.",
   "license": "MIT",
   "repository": {
@@ -21,8 +21,15 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "main": "./src/index.js",
   "types": "./types/index.d.ts",
+  "bin": {
+    "ramp-check": "./src/cli/index.js"
+  },
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
@@ -31,13 +38,26 @@
     "./test": {
       "types": "./types/test/fixtures.d.ts",
       "default": "./src/test/fixtures.js"
+    },
+    "./cli": {
+      "types": "./types/cli/run.d.ts",
+      "default": "./src/cli/run.js"
+    },
+    "./patterns": {
+      "types": "./types/patterns/index.d.ts",
+      "default": "./src/patterns/index.js"
+    },
+    "./eslint": {
+      "types": "./types/eslint.d.ts",
+      "default": "./src/eslint.js"
     }
   },
   "scripts": {
     "test": "playwright test",
     "typecheck": "tsc --noEmit",
     "build:types": "tsc",
-    "prepack": "npm run build:types"
+    "smoke": "bash scripts/smoke.sh",
+    "prepare": "npm run build:types"
   },
   "keywords": [
     "accessibility",

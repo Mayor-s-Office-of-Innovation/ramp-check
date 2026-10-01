@@ -8,7 +8,7 @@
 /** @typedef {"2.0" | "2.1" | "2.2"} WcagVersion */
 /** @typedef {"block" | "warn"} Severity */
 /** @typedef {"block" | "warn" | "off"} Mode */
-/** @typedef {"axe" | "motion" | "reflow"} CheckName */
+/** @typedef {"axe" | "motion" | "reflow" | "keyboard" | "textSpacing" | "consistency" | "pattern"} CheckName */
 
 /**
  * The WCAG success criterion a finding enforces.
@@ -27,8 +27,10 @@
  * @property {string} message    one line a person can act on
  * @property {WcagRef} wcag
  * @property {string} [help]     URL with more detail
+ * @property {string} [technique] WCAG failure or sufficient technique id the rule maps to, e.g. "F78"
  * @property {Severity} [severity]  set by the policy, not by the check
  * @property {AllowlistEntry} [allowlisted]  set when an allowlist entry covers it
+ * @property {import("./checks/baseline.js").BaselineEntry} [baselined]  set when a baseline entry covers it
  * @property {Record<string, unknown>} [data]  check-specific detail kept for reports
  */
 

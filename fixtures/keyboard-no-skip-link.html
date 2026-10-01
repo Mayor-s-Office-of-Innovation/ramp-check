@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: no skip link</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
+    .skip:focus { left: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Keyboard</a> <a href="/axe-contrast.html">Contrast</a> <a href="/reflow-overflow.html">Reflow</a> <a href="/motion-guarded.html">Motion</a></nav>
+  </header>
+  <main id="main">
+    <h1>No skip link</h1>
+    <p>Five navigation links precede the main landmark and nothing lets a keyboard user bypass them.</p>
+    <p><button type="button" id="btn">A button</button></p>
+  </main>
+</body>
+</html>

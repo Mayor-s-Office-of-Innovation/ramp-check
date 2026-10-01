@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Patterns: status messages</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    main { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    button, input { font: inherit; padding: .5rem 1rem; }
+    button { background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <main id="main">
+    <h1>Status messages</h1>
+    <p><button type="button" id="save-good">Save (announces)</button></p>
+    <p><button type="button" id="save-silent">Save (silent)</button></p>
+    <p><button type="button" id="save-late">Save (late live region)</button></p>
+    <div role="status" id="status"></div>
+    <div id="plain"></div>
+    <div id="late-host"></div>
+  </main>
+  <script>
+    document.getElementById("save-good").addEventListener("click", () => {
+      setTimeout(() => { document.getElementById("status").textContent = "Saved your changes."; }, 100);
+    });
+    document.getElementById("save-silent").addEventListener("click", () => {
+      document.getElementById("plain").textContent = "Saved your changes."; // visible, never announced
+    });
+    document.getElementById("save-late").addEventListener("click", () => {
+      const alert = document.createElement("div");
+      alert.setAttribute("role", "alert");
+      alert.textContent = "Saved your changes.";
+      document.getElementById("late-host").append(alert);
+    });
+  </script>
+</body>
+</html>

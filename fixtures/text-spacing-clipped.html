@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Text spacing: clipped card</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.2; }
+    main { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    /* Seeded defect: a fixed-height card that fits its two lines at line-height 1.2
+       and clips once a user raises line height to 1.5. */
+    .card { height: 2.6em; overflow: hidden; border: 1px solid #1a1a1a; padding: 0 .5rem; }
+    /* Not a defect: truncated by design before any spacing change. */
+    .truncated { width: 12ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #1a1a1a; }
+    /* Not a defect: the box grows with its content. */
+    .fluid { border: 1px solid #1a1a1a; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <main id="main">
+    <h1>Text spacing</h1>
+    <div class="card" id="card">Two short lines of text that fit at the default line height.<br>Second line.</div>
+    <p class="truncated" id="truncated">This sentence was already truncated with an ellipsis before any change.</p>
+    <div class="fluid" id="fluid">This box has overflow hidden but no fixed height, so it grows.</div>
+  </main>
+</body>
+</html>
