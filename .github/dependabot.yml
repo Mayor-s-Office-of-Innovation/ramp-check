@@ -1,15 +1,22 @@
 version: 2
 updates:
   - package-ecosystem: npm
+    open-pull-requests-limit: 5
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 5
     groups:
       axe:
         patterns: ["@axe-core/*", "axe-core"]
       playwright:
         patterns: ["@playwright/*", "playwright*"]
   - package-ecosystem: github-actions
+    open-pull-requests-limit: 5
     directory: /
     schedule:
       interval: weekly
