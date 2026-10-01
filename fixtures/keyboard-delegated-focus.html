@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: delegated focus widget</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
+    .skip:focus { left: 1rem; }
+    /* A plain control after the widgets, for the traversal's tail.
+       Same suppression as the seeded-defect pages have for the audited
+       controls, so the fixture stays focused on the widget behavior. */
+    :focus { outline: none; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    #plain:focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Keyboard</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <h1>Delegated focus widget</h1>
+
+    <!-- An OTP-style widget: Tab (or a click) puts focus on a 1x1 invisible
+         proxy input; the visible indicator is an outline on the active
+         segment, drawn via :host(:focus-within) — never on the proxy itself.
+         Must stay quiet: the ring is a surrogate indicator, and 2.4.7 asks
+         for a visible indicator, not for one on the focused proxy. -->
+    <otp-field></otp-field>
+
+    <!-- Same pattern, but the caret position (and the ring) tracks a value:
+         ring on a later segment, far from both host top-left and the proxy. -->
+    <otp-field id="prefilled" value="AB"></otp-field>
+
+    <!-- A pass-through widget: no indicator anywhere. Must fail: delegation
+         does not excuse an invisible focus indicator. -->
+    <quiet-field></quiet-field>
+
+    <p><button type="button" id="plain">Plain button</button></p>
+  </main>
+  <footer><p>Fixture for ramp-check.</p></footer>
+  <script>
+    function segmentsHost(ringOnFocusWithin) {
+      return class extends HTMLElement {
+        constructor() {
+          super();
+          const value = this.getAttribute("value") ?? "";
+          const n = Number(this.getAttribute("length") ?? 4);
+          const active = Math.min(value.length, n - 1);
+          this.attachShadow({ mode: "open" }).innerHTML = `
+            <style>
+              :host { display: inline-block; font: inherit; }
+              .segments { display: inline-flex; gap: 8px; padding: 16px; }
+              .segment { display: inline-flex; align-items: center; justify-content: center;
+                         width: 40px; height: 48px; border: 1.5px solid #9aa4ad; border-radius: 6px;
+                         font-size: 24px; }
+              ${ringOnFocusWithin
+                ? `:host(:focus-within) .segment--active { outline: 3px solid #0b4f8a; outline-offset: 2px; }`
+                : ``}
+            </style>
+            <div class="segments" role="group" aria-label="Code">
+              ${Array.from({ length: n }, (_, i) =>
+                `<div class="segment${i === active ? " segment--active" : ""}" aria-hidden="true">${value[i] ?? ""}</div>`).join("")}
+            </div>
+            <input id="proxy" aria-label="Code"
+                   style="position:absolute; width:1px; height:1px; opacity:0; border:0; padding:0; margin:0;">
+          `;
+          const input = this.shadowRoot.getElementById("proxy");
+          const segments = this.shadowRoot.querySelector(".segments");
+          // delegatesFocus semantics: focus lands on the proxy input.
+          this.addEventListener("focus", () => input.focus());
+          input.addEventListener("input", () => {
+            const v = input.value;
+            const active = Math.min(v.length, n - 1);
+            [...segments.children].forEach((seg, i) => {
+              seg.textContent = v[i] ?? "";
+              seg.classList.toggle("segment--active", i === active);
+            });
+          });
+        }
+      };
+    }
+    customElements.define("otp-field", segmentsHost(true));
+    customElements.define("quiet-field", segmentsHost(false));
+  </script>
+</body>
+</html>

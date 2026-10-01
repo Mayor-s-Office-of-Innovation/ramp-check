@@ -12,7 +12,7 @@ default. Turn it off with `checks: { keyboard: "off" }`.
 | `keyboard-unreachable` | 2.1.1 | A | an interactive element never received focus during a full traversal |
 | `keyboard-trap` | 2.1.2 | A | Tab stopped moving focus, or the traversal neither ended nor cycled within its step budget |
 | `positive-tabindex` | 2.4.3 | A | an interactive element has `tabindex` greater than zero |
-| `focus-not-visible` | 2.4.7 | AA | no computed style changed on focus and a padded screenshot is byte-identical before and after |
+| `focus-not-visible` | 2.4.7 | AA | no computed style changed on focus (including shadow hosts'), and a padded screenshot is byte-identical before and after |
 | `focus-indicator-thin` | 2.4.13 | AAA | the only visible change is an outline under 2 CSS px (heuristic) |
 | `focus-obscured` | 2.4.11 | AA (2.2) | every sampled point of the focused element hit-tests to something else |
 | `focus-partially-obscured` | 2.4.12 | AAA (2.2) | some sampled points hit-test to something else |
@@ -42,6 +42,16 @@ actually renders. When nothing changed, the fallback blurs the element,
 screenshots its padded box, refocuses it, screenshots again, and compares
 bytes. The caret is hidden in screenshots, so a text field whose only
 indicator is the caret is reported.
+
+When focus crosses a shadow boundary, the hosts' computed styles join the
+comparison (`:host(:focus)` and `:host(:focus-within)` rules) and the
+screenshot region becomes the outermost host's box. This is the
+delegated-focus pattern: Tab lands on a 1×1 invisible proxy input while the
+widget draws its ring on a visible surrogate (OTP segments, a pill field),
+so a real indicator away from the proxy passes. When the style layer sees
+only the proxy's own thin UA outline, the pixel layer is authoritative: a
+byte-different host region (a real surrogate ring) means visible; an
+identical one reports `focus-indicator-thin`, not `focus-not-visible`.
 
 **Obscured focus** samples the centre and four points a quarter of the way in
 from each corner, using `elementFromPoint` on the element's own root, so

@@ -75,6 +75,24 @@ test.describe("keyboard audit", () => {
     expect(thin?.wcag).toEqual({ criterion: "2.4.13", level: "AAA", version: "2.2" });
   });
 
+  test("a delegated-focus widget's surrogate ring is a visible indicator; missing ring still fails", async ({ page }) => {
+    await page.goto("/keyboard-delegated-focus.html");
+    const result = await keyboardAudit(page);
+    // The two widgets with :host(:focus-within) rings pass even though Tab
+    // lands on a 1×1 invisible proxy input; the ringless quiet-field fails —
+    // its only "change" is the UA's never-rendered 1px outline on the proxy,
+    // which the pixel layer refutes (host region identical) → thin, not
+    // not-visible, is the honest verdict.
+    expect(keys(result.findings)).toEqual(["focus-indicator-thin quiet-field >>> input#proxy"]);
+    expect(result.findings[0].wcag).toEqual({ criterion: "2.4.13", level: "AAA", version: "2.2" });
+    // The audit observed the surrogate (host) region changed with focus even
+    // though the proxy's own styles never moved.
+    const steps = result.sequence.filter((s) => s.path.includes("otp-field"));
+    expect(steps.length).toBeGreaterThanOrEqual(2);
+    expect(steps.every((s) => s.styleDiff.length > 0 || s.screenshotChanged || s.hostStyleDiff)).toBe(true);
+    expect(steps.every((s) => s.obscured === "none")).toBe(true);
+  });
+
   test("focus hidden under a fixed banner, fully and partly", async ({ page }) => {
     await page.goto("/keyboard-focus-obscured.html");
     const result = await keyboardAudit(page);

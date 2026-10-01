@@ -17,7 +17,10 @@
  * - focus-not-visible (2.4.7 AA): the focused element's computed outline,
  *   box-shadow, border, background, color and text-decoration all match its
  *   resting state, and a padded screenshot of it is byte-identical before
- *   and after focus.
+ *   and after focus. When focus crosses a shadow boundary, the shadow hosts'
+ *   computed styles join the diff (a delegated-focus widget may draw its ring
+ *   on a surrogate — segments, a field—rather than the proxy input) and the
+ *   screenshot region covers the outermost host.
  * - focus-indicator-thin (2.4.13 AAA, heuristic): the only visible change is
  *   an outline under 2 CSS px.
  * - focus-obscured (2.4.11 AA, WCAG 2.2) and focus-partially-obscured
@@ -68,6 +71,8 @@
  * @property {"none" | "partial" | "full" | "unknown"} obscured
  * @property {{ x: number, y: number, width: number, height: number } | null} rect  viewport-relative
  * @property {boolean} screenshotChanged  set by the fallback when styles did not change
+ * @property {boolean} hostStyleDiff  a shadow ancestor's computed styles changed on focus (delegated-focus surrogate ring)
+ * @property {{ x: number, y: number, width: number, height: number } | null} hostRect  the outermost shadow host's rect, for the screenshot fallback
  */
 
 /**
@@ -201,11 +206,26 @@ function keyboardRuntime({ props }) {
     for (const p of props) out[p] = cs.getPropertyValue(p);
     return out;
   }
+  /** The chain of shadow hosts from el's tree up to the document, outermost first. @param {Element} el */
+  function hostChain(el) {
+    /** @type {Element[]} */
+    const out = [];
+    let root = /** @type {Document | ShadowRoot} */ (el.getRootNode());
+    while (root instanceof ShadowRoot) {
+      out.unshift(root.host);
+      root = /** @type {Document | ShadowRoot} */ (root.host.getRootNode());
+    }
+    return out;
+  }
 
   /** @type {Element[]} */
   let elements = [];
   /** @type {Record<string, string>[]} */
   let resting = [];
+  /** @type {Element[][]} */
+  let restingHosts = [];
+  /** @type {Record<string, string>[][]} */
+  let restingHostStyles = [];
   /** @type {Element | null} */
   let savedActive = null;
 
@@ -247,6 +267,9 @@ function keyboardRuntime({ props }) {
       const radio = el instanceof HTMLInputElement && el.type === "radio" && el.name ? `${pathFor(el.form ?? document.body)}|${el.name}` : null;
       elements.push(el);
       resting.push(snapshot(el));
+      const hosts = hostChain(el);
+      restingHosts.push(hosts);
+      restingHostStyles.push(hosts.map((h) => snapshot(h)));
       candidates.push({
         index: elements.length - 1,
         path: pathFor(el),
@@ -266,11 +289,14 @@ function keyboardRuntime({ props }) {
   function step() {
     const el = deepActive();
     if (!el || el === document.body || el === document.documentElement) {
-      return { index: -1, path: "body", isBody: true, isFrame: false, styleDiff: [], outlineWidth: 0, obscured: "unknown", rect: null, screenshotChanged: false };
+      return { index: -1, path: "body", isBody: true, isFrame: false, styleDiff: [], outlineWidth: 0, obscured: "unknown", rect: null, screenshotChanged: false, hostStyleDiff: false, hostRect: null };
     }
     const index = elements.indexOf(el);
     const styleDiff = [];
     let outlineWidth = 0;
+    let hostStyleDiff = false;
+    /** @type {{ x: number, y: number, width: number, height: number } | null} */
+    let hostRect = null;
     if (index >= 0) {
       const now = snapshot(el);
       const before = resting[index];
@@ -284,6 +310,22 @@ function keyboardRuntime({ props }) {
       }
       if (outlineVisible(now) && styleDiff.some((p) => p.startsWith("outline"))) {
         outlineWidth = Number.parseFloat(now["outline-width"]) || 0;
+      }
+      // A delegated-focus widget shows focus on a surrogate inside its shadow
+      // tree, not on the proxy element Tab lands on. The hosts' own computed
+      // styles change via :host(:focus)/:host(:focus-within) rules.
+      const hosts = restingHosts[index];
+      for (let h = 0; h < hosts.length; h++) {
+        const hostNow = snapshot(hosts[h]);
+        const hostBefore = restingHostStyles[index][h];
+        if (props.some((p) => hostNow[p] !== hostBefore[p])) {
+          hostStyleDiff = true;
+          break;
+        }
+      }
+      if (hosts.length) {
+        const hr = hosts[0].getBoundingClientRect();
+        hostRect = { x: hr.x, y: hr.y, width: hr.width, height: hr.height };
       }
     }
     const r = el.getBoundingClientRect();
@@ -321,6 +363,8 @@ function keyboardRuntime({ props }) {
       obscured,
       rect: { x: r.x, y: r.y, width: r.width, height: r.height },
       screenshotChanged: false,
+      hostStyleDiff,
+      hostRect,
     };
   }
 
@@ -461,7 +505,21 @@ export async function keyboardAudit(page, opts = {}) {
       terminated = wrapped ? "end" : "cycle";
       break;
     }
-    if (step.index >= 0 && step.styleDiff.length === 0 && useScreenshots && !step.isFrame) {
+    if (step.index >= 0 && step.styleDiff.length === 0 && !step.hostStyleDiff && useScreenshots && !step.isFrame) {
+      step.screenshotChanged = await screenshotChanges(page, step);
+    } else if (
+      step.index >= 0 &&
+      step.hostRect &&
+      step.styleDiff.length > 0 &&
+      step.styleDiff.every((p) => p.startsWith("outline")) &&
+      step.outlineWidth < 2 &&
+      useScreenshots &&
+      !step.isFrame
+    ) {
+      // A shadow-tree proxy can carry a UA thin outline it never renders
+      // (1×1, opacity 0). The style layer says "thin indicator"; the pixel
+      // layer over the host region sees the widget's real surrogate ring.
+      // Pixels win: a changed region upgrades thin → visible.
       step.screenshotChanged = await screenshotChanges(page, step);
     }
     sequence.push(step);
@@ -568,7 +626,7 @@ export async function keyboardAudit(page, opts = {}) {
       }
       continue;
     }
-    const visibleChange = s.styleDiff.length > 0 || s.screenshotChanged;
+    const visibleChange = s.styleDiff.length > 0 || s.screenshotChanged || s.hostStyleDiff;
     if (!visibleChange) {
       add({
         check: "keyboard",
@@ -581,6 +639,8 @@ export async function keyboardAudit(page, opts = {}) {
         data: { styleDiff: s.styleDiff },
       });
     } else if (
+      !s.hostStyleDiff &&
+      !s.screenshotChanged &&
       s.styleDiff.length &&
       s.styleDiff.every((p) => p.startsWith("outline")) &&
       s.outlineWidth > 0 &&
@@ -674,17 +734,21 @@ export async function keyboardAudit(page, opts = {}) {
 
 /**
  * Pixel fallback for focus visibility: blur, shoot, refocus, shoot, compare.
+ * When focus sits inside a shadow tree, the region is the outermost host's
+ * rect — the widget's surrogate indicator lives there, not on the 1×1 proxy
+ * input Tab lands on.
  * @param {Page} page
  * @param {FocusStep} step
  */
 async function screenshotChanges(page, step) {
-  if (!step.rect) return false;
+  const region = step.hostRect ?? step.rect;
+  if (!region) return false;
   const viewport = page.viewportSize() ?? { width: 1280, height: 720 };
   const pad = 8;
-  const x = Math.max(0, step.rect.x - pad);
-  const y = Math.max(0, step.rect.y - pad);
-  const width = Math.min(viewport.width - x, step.rect.width + pad * 2);
-  const height = Math.min(viewport.height - y, step.rect.height + pad * 2);
+  const x = Math.max(0, region.x - pad);
+  const y = Math.max(0, region.y - pad);
+  const width = Math.min(viewport.width - x, region.width + pad * 2);
+  const height = Math.min(viewport.height - y, region.height + pad * 2);
   if (width <= 0 || height <= 0) return false;
   const clip = { x, y, width, height };
   await page.evaluate(() => /** @type {any} */ (window).__rampCheckKeyboard.blur());
