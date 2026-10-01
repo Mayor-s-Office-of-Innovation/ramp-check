@@ -7,6 +7,7 @@
 import { axeScan, settle } from "./checks/axe.js";
 import { motionAudit } from "./checks/motion.js";
 import { reflowCheck } from "./checks/reflow.js";
+import { keyboardAudit } from "./checks/keyboard.js";
 import { applyAllowlist, loadAllowlist } from "./checks/allowlist.js";
 import { resolvePolicy, severityFor } from "./policy.js";
 
@@ -26,6 +27,7 @@ import { resolvePolicy, severityFor } from "./policy.js";
  *   "warn" forces it; "off" skips the check.
  * @property {import("./checks/motion.js").MotionAuditOptions} [motion]
  * @property {import("./checks/reflow.js").ReflowOptions} [reflow]
+ * @property {import("./checks/keyboard.js").KeyboardAuditOptions} [keyboard]
  * @property {string[]} [tags]       escape hatch: raw axe tags (see docs/config.md)
  * @property {string[]} [disableRules]  axe rule ids to skip entirely; prefer the allowlist
  * @property {string | AllowlistEntry[]} [allowlist]  path to JSON, or inline entries
@@ -43,6 +45,7 @@ import { resolvePolicy, severityFor } from "./policy.js";
  * @property {AllowlistEntry[]} expired
  * @property {AllowlistEntry[]} unused
  * @property {import("./checks/motion.js").MotionAuditResult} [motion]
+ * @property {import("./checks/keyboard.js").KeyboardAuditResult} [keyboard]
  */
 
 /**
@@ -69,6 +72,8 @@ export async function runChecks(page, config = {}, ctx = {}) {
   const findings = [];
   /** @type {import("./checks/motion.js").MotionAuditResult | undefined} */
   let motion;
+  /** @type {import("./checks/keyboard.js").KeyboardAuditResult | undefined} */
+  let keyboard;
 
   // Motion first, before anything waits: only motion still running is visible.
   if (mode("motion") !== "off" && ctx.reducedMotion) {
@@ -91,6 +96,12 @@ export async function runChecks(page, config = {}, ctx = {}) {
     const reflow = await reflowCheck(page, config.reflow);
     findings.push(...reflow.findings);
     ran.push("reflow");
+  }
+  // Keyboard last: it moves focus (restored afterwards) and is the slowest.
+  if (mode("keyboard") !== "off") {
+    keyboard = await keyboardAudit(page, config.keyboard);
+    findings.push(...keyboard.findings);
+    ran.push("keyboard");
   }
 
   for (const f of findings) {
@@ -116,6 +127,7 @@ export async function runChecks(page, config = {}, ctx = {}) {
     expired,
     unused,
     motion,
+    keyboard,
   };
 }
 

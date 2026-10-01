@@ -6,6 +6,16 @@
 export { axeScan, settle, formatTarget } from "./checks/axe.js";
 export { motionAudit, motionRuntime } from "./checks/motion.js";
 export { reflowCheck } from "./checks/reflow.js";
+export { keyboardAudit } from "./checks/keyboard.js";
+export { siteConsistency, PRIMARY_NAV_SELECTOR } from "./checks/consistency.js";
+export {
+  loadBaseline,
+  applyBaseline,
+  buildBaseline,
+  writeBaseline,
+  baselineKey,
+  DEFAULT_EXPIRY_DAYS,
+} from "./checks/baseline.js";
 export {
   loadAllowlist,
   applyAllowlist,

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: invisible focus</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
+    .skip:focus { left: 1rem; }
+    /* Seeded defects: focus styling removed. */
+    #none:focus, #none:focus-visible { outline: none; }
+    #thin:focus, #thin:focus-visible { outline: 1px solid #0b4f8a; outline-offset: 0; }
+    /* Fine: a box-shadow ring instead of an outline. */
+    #shadow:focus, #shadow:focus-visible { outline: none; box-shadow: 0 0 0 3px #1a1a1a; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Keyboard</a> <a href="/axe-contrast.html">Contrast</a> <a href="/reflow-overflow.html">Reflow</a> <a href="/motion-guarded.html">Motion</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <h1>Invisible focus</h1>
+    <p>One button with no focus indicator at all, one with a 1px outline, one with a proper box-shadow ring.</p>
+    <p><button type="button" id="none">No indicator</button></p>
+    <p><button type="button" id="thin">Thin outline</button></p>
+    <p><button type="button" id="shadow">Shadow ring</button></p>
+  </main>
+  <footer><p>Fixture for ramp-check.</p></footer>
+</body>
+</html>

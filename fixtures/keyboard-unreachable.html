@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: unreachable controls</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
+    .skip:focus { left: 1rem; }
+    .fake { display: inline-block; padding: .5rem 1rem; border: 1px solid #1a1a1a; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Keyboard</a> <a href="/axe-contrast.html">Contrast</a> <a href="/reflow-overflow.html">Reflow</a> <a href="/motion-guarded.html">Motion</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <h1>Unreachable controls</h1>
+    <p>Three controls a Tab traversal never reaches: a div with onclick, a span with role="button" and no tabindex, and a link with tabindex="-1". Plus a button with a positive tabindex that jumps the queue.</p>
+    <p><button type="button" id="real">Real button</button></p>
+    <div class="fake" id="click-div" onclick="alert('hi')">Clickable div</div>
+    <span class="fake" id="role-span" role="button">Role button span</span>
+    <p><a id="minus-one" href="/clean.html" tabindex="-1">Link removed from tab order</a></p>
+    <p><button type="button" id="jumps-queue" tabindex="2">Positive tabindex</button></p>
+  </main>
+  <footer><p>Fixture for ramp-check.</p></footer>
+</body>
+</html>

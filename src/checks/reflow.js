@@ -38,9 +38,14 @@ export async function reflowCheck(page, opts = {}) {
       /** @param {Element} el */
       const selectorFor = (el) => {
         let s = el.localName;
-        if (el.id) s += `#${el.id}`;
+        if (el.id) return `${s}#${el.id}`;
         const classes = Array.from(el.classList).slice(0, 2);
         if (classes.length) s += `.${classes.join(".")}`;
+        const parent = el.parentElement;
+        if (parent) {
+          const same = Array.from(parent.children).filter((c) => c.localName === el.localName);
+          if (same.length > 1) s += `:nth-of-type(${same.indexOf(el) + 1})`;
+        }
         return s;
       };
       const sticking = new Set();

@@ -61,9 +61,16 @@ export function motionRuntime() {
   /** @param {Element} el */
   function selectorFor(el) {
     let s = el.localName;
-    if (el.id) s += `#${el.id}`;
+    if (el.id) return `${s}#${el.id}`;
     const classes = Array.from(el.classList).slice(0, 2);
     if (classes.length) s += `.${classes.join(".")}`;
+    // Siblings of the same tag share a path otherwise (five nav links are all "a").
+    const root = el.getRootNode();
+    const parent = el.parentElement ?? (root instanceof ShadowRoot ? root : null);
+    if (parent) {
+      const same = Array.from(parent.children).filter((c) => c.localName === el.localName);
+      if (same.length > 1) s += `:nth-of-type(${same.indexOf(el) + 1})`;
+    }
     return s;
   }
 

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: clean</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
+    .skip:focus { left: 1rem; }
+    [role=tab] { background: #eee; color: #1a1a1a; }
+    [role=tab][aria-selected=true] { background: #0b4f8a; color: #fff; }
+    [role=menu] { list-style: none; padding: 0; display: flex; gap: .5rem; }
+    [role=menuitem] { padding: .25rem .5rem; border: 1px solid #1a1a1a; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Keyboard</a> <a href="/axe-contrast.html">Contrast</a> <a href="/reflow-overflow.html">Reflow</a> <a href="/motion-guarded.html">Motion</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <h1>Keyboard: clean</h1>
+    <p>A working skip link, five nav links, a roving-tabindex tablist, a radio group, a shadow-root button and a menu. Every control is reachable, every focus state is visible, nothing is obscured. The control page.</p>
+    <div role="tablist" aria-label="Sections" id="tabs">
+      <button role="tab" id="tab-a" aria-selected="true" aria-controls="panel-a" tabindex="0">Alpha</button>
+      <button role="tab" id="tab-b" aria-selected="false" aria-controls="panel-b" tabindex="-1">Beta</button>
+      <button role="tab" id="tab-c" aria-selected="false" aria-controls="panel-c" tabindex="-1">Gamma</button>
+    </div>
+    <div role="tabpanel" id="panel-a" aria-labelledby="tab-a"><p>Alpha panel</p></div>
+    <div role="tabpanel" id="panel-b" aria-labelledby="tab-b" hidden><p>Beta panel</p></div>
+    <div role="tabpanel" id="panel-c" aria-labelledby="tab-c" hidden><p>Gamma panel</p></div>
+    <fieldset>
+      <legend>Size</legend>
+      <label><input type="radio" name="size" value="s" checked> Small</label>
+      <label><input type="radio" name="size" value="m"> Medium</label>
+      <label><input type="radio" name="size" value="l"> Large</label>
+    </fieldset>
+    <ul role="menu" aria-label="Actions" id="menu">
+      <li role="menuitem" tabindex="0">Edit</li>
+      <li role="menuitem" tabindex="-1">Duplicate</li>
+      <li role="menuitem" tabindex="-1">Delete</li>
+    </ul>
+    <fancy-button></fancy-button>
+    <p><button type="button" id="plain">Plain button</button></p>
+  </main>
+  <footer><p>Fixture for ramp-check.</p></footer>
+  <script>
+    customElements.define("fancy-button", class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" }).innerHTML = `
+          <style>button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+                 button:focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }</style>
+          <button type="button" id="shadow-btn">Shadow button</button>`;
+      }
+    });
+    // Roving tabindex for the tablist and menu: arrow keys move focus.
+    for (const sel of ["[role=tablist]", "[role=menu]"]) {
+      const group = document.querySelector(sel);
+      group.addEventListener("keydown", (e) => {
+        const items = [...group.querySelectorAll("[tabindex]")];
+        const i = items.indexOf(document.activeElement);
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") { items[(i + 1) % items.length].focus(); e.preventDefault(); }
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") { items[(i - 1 + items.length) % items.length].focus(); e.preventDefault(); }
+      });
+    }
+  </script>
+</body>
+</html>

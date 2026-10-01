@@ -6,7 +6,7 @@ a11yMatrix({ colorScheme: ["light", "dark"], reducedMotion: ["reduce"] }, (cell)
   test(`clean page passes a11y.check (${cell.name})`, async ({ page, a11y }) => {
     await page.goto("/clean.html");
     const result = await a11y.check("clean");
-    expect(result.ran).toEqual(["motion", "axe", "reflow"]);
+    expect(result.ran).toEqual(["motion", "axe", "reflow", "keyboard"]);
     expect(result.policy).toBe("wcag-aaa");
   });
 });
@@ -31,13 +31,13 @@ test.describe("a11y.check under reduced motion", () => {
   test("per-call overrides turn a check off", async ({ page, a11y }) => {
     await page.goto("/motion-unguarded.html");
     const result = await a11y.scan("no motion", { checks: { motion: "off" } });
-    expect(result.ran).toEqual(["axe", "reflow"]);
+    expect(result.ran).toEqual(["axe", "reflow", "keyboard"]);
     expect(result.blocking).toEqual([]);
   });
 });
 
 test.describe("a11yConfig option", () => {
-  test.use({ a11yConfig: { policy: "wcag22-aa", checks: { reflow: "off" } } });
+  test.use({ a11yConfig: { policy: "wcag22-aa", checks: { reflow: "off", keyboard: "off" } } });
 
   test("sets the policy for every check in the block", async ({ page, a11y }) => {
     await page.goto("/axe-contrast.html");

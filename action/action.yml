@@ -1,0 +1,122 @@
+name: ramp-check
+description: >-
+  Automated accessibility checks for the pages you name: everything axe checks,
+  plus motion, keyboard, reflow, and cross-page consistency. Uploads the JSON
+  report as an artifact and posts the Markdown summary as a pull-request comment.
+author: ramp-check contributors
+branding:
+  icon: check-square
+  color: blue
+
+inputs:
+  config:
+    description: Path to ramp-check.config.js, relative to working-directory.
+    default: ramp-check.config.js
+  base-url:
+    description: Override the config's baseURL (for example, a preview deployment URL).
+    default: ""
+  policy:
+    description: Override the config's policy (wcag-aaa | wcag22-aa | wcag21-aa).
+    default: ""
+  working-directory:
+    description: Directory containing package.json and the config.
+    default: "."
+  version:
+    description: ramp-check version to install when the repo does not already depend on it.
+    default: latest
+  comment:
+    description: Post or update a pull-request comment with the Markdown report ("true" | "false").
+    default: "true"
+  artifact-name:
+    description: Name of the uploaded report artifact.
+    default: ramp-check-report
+  node-version:
+    description: Node.js version.
+    default: "22"
+
+outputs:
+  exit-code:
+    description: 0 clean, 1 findings or expired exceptions, 2 config error.
+    value: ${{ steps.run.outputs.code }}
+  report-dir:
+    description: Directory holding ramp-check.json and ramp-check.md.
+    value: ${{ steps.run.outputs.out }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [ -f package-lock.json ]; then npm ci; elif [ -f package.json ]; then npm install; fi
+        if [ ! -d node_modules/ramp-check ]; then
+          npm install --no-save "ramp-check@${VERSION}" @playwright/test
+        fi
+        npx playwright install --with-deps chromium
+
+    - name: Run ramp-check
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        CONFIG: ${{ inputs.config }}
+        BASE_URL: ${{ inputs.base-url }}
+        POLICY: ${{ inputs.policy }}
+      run: |
+        set +e
+        out="$RUNNER_TEMP/ramp-check-report"
+        args=(--config "$CONFIG" --out "$out")
+        [ -n "$BASE_URL" ] && args+=(--base-url "$BASE_URL")
+        [ -n "$POLICY" ] && args+=(--policy "$POLICY")
+        npx ramp-check "${args[@]}"
+        code=$?
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+        echo "out=$out" >> "$GITHUB_OUTPUT"
+        if [ -f "$out/ramp-check.md" ]; then cat "$out/ramp-check.md" >> "$GITHUB_STEP_SUMMARY"; fi
+        exit 0
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.run.outputs.out }}
+        if-no-files-found: ignore
+        retention-days: 30
+
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      env:
+        REPORT: ${{ steps.run.outputs.out }}/ramp-check.md
+      with:
+        script: |
+          const fs = require("fs");
+          if (!fs.existsSync(process.env.REPORT)) return;
+          const body = fs.readFileSync(process.env.REPORT, "utf8");
+          const marker = "<!-- ramp-check-report -->";
+          const { owner, repo } = context.repo;
+          const issue_number = context.payload.pull_request.number;
+          const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
+          const mine = comments.find((c) => c.user?.type === "Bot" && c.body?.startsWith(marker));
+          if (mine) {
+            await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+          } else {
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
+          }
+
+    - name: Fail the job on findings
+      shell: bash
+      env:
+        CODE: ${{ steps.run.outputs.code }}
+      run: |
+        if [ "$CODE" != "0" ]; then
+          echo "ramp-check exited with $CODE. See the step summary, the PR comment, or the uploaded report."
+          exit "$CODE"
+        fi

@@ -23,6 +23,9 @@
   ],
   "main": "./src/index.js",
   "types": "./types/index.d.ts",
+  "bin": {
+    "ramp-check": "./src/cli/index.js"
+  },
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
@@ -31,6 +34,10 @@
     "./test": {
       "types": "./types/test/fixtures.d.ts",
       "default": "./src/test/fixtures.js"
+    },
+    "./cli": {
+      "types": "./types/cli/run.d.ts",
+      "default": "./src/cli/run.js"
     }
   },
   "scripts": {

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: obscured focus</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
+    .skip:focus { left: 1rem; }
+    body { height: 2000px; }
+    .banner { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: #0b4f8a; color: #fff; padding: 1rem; box-sizing: border-box; z-index: 10; }
+    main { padding-top: 0; position: relative; }
+    #hidden { position: absolute; top: 20px; left: 1rem; }
+    #half { position: absolute; top: 70px; left: 1rem; }
+    #fine { position: absolute; top: 140px; left: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="banner" role="banner"><p>Fixed banner, 80px tall</p></div>
+  <main id="main">
+    <h1 style="position:absolute; top: 100px; left: 1rem;">Obscured focus</h1>
+    <a id="hidden" href="/clean.html">Entirely under the banner</a>
+    <a id="half" href="/clean.html">Half under the banner</a>
+    <a id="fine" href="/clean.html">Fully visible</a>
+  </main>
+</body>
+</html>

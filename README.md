@@ -15,13 +15,26 @@ Everything axe checks, plus the things axe structurally cannot: motion
 (does the page honor reduced motion?), keyboard (can you reach everything?),
 reflow (does it fit a narrow screen?).
 
-Status: phase 0. The core checks and Playwright fixtures work; the
-config-driven CLI, the keyboard audit, and the GitHub Action are next.
+Status: phase 1. The core checks, the keyboard audit, and the Playwright
+fixtures work; the config-driven CLI and the GitHub Action are next.
 See [Roadmap](#roadmap).
 
 ## Is this a replacement for manual accessibility testing?
 
 No. This helps increase automated coverage but you still need to test your applications with a screenreader and get feedback from real people that depend on assistive technologies.
+
+### In CI
+
+```yaml
+      - uses: Mayor-s-Office-of-Innovation/ramp-check/action@main
+        with:
+          config: ramp-check.config.js   # or base-url: ${{ steps.deploy.outputs.url }}
+```
+
+Uploads the JSON report, writes the summary to the job, and posts one
+pull-request comment that later runs update in place. See
+[action/README.md](action/README.md) and the
+[example site](examples/minimal-static-site/).
 
 ## Quickstart (teams with Playwright specs)
 
@@ -39,9 +52,12 @@ test("checkout dialog", async ({ page, a11y }) => {
 });
 ```
 
-`a11y.check(label)` waits for animations to settle, runs axe, and checks
-reflow at 320 px. Under `reducedMotion: "reduce"` it also runs the motion
-audit. Blocking findings fail the test with one line each; warnings are
+`a11y.check(label)` waits for animations to settle, runs axe, checks
+reflow at 320 px, and runs the keyboard audit (a full Tab traversal; see
+[docs/keyboard.md](docs/keyboard.md) for how it decides and
+[docs/keyboard-limitations.md](docs/keyboard-limitations.md) for what it
+cannot catch).
+Under `reducedMotion: "reduce"` it also runs the motion audit. Blocking findings fail the test with one line each; warnings are
 recorded as test annotations; the full result is attached as JSON.
 
 To cover both color schemes and reduced motion in one file, let `a11yMatrix`
@@ -100,9 +116,30 @@ Details and the ADA references: [docs/conformance-level.md](docs/conformance-lev
 | motion: `infinite-animation` | 2.2.2 | A | looping animations (spinners) not stopped under reduced motion |
 | motion: `view-transition-animates` | 2.3.3 | AAA | `document.startViewTransition()` cross-fades, which the API does not skip under reduced motion and a `*` CSS rule cannot reach |
 | reflow: `reflow-horizontal-scroll` | 1.4.10 | AA | horizontal scrolling at 320 px, naming the elements that stick out |
+| keyboard: `keyboard-unreachable` | 2.1.1 | A | interactive elements (controls, `[role]` widgets, `[onclick]`) a full Tab traversal never reaches, following focus into shadow roots |
+| keyboard: `keyboard-trap` | 2.1.2 | A | Tab stops moving focus |
+| keyboard: `positive-tabindex` | 2.4.3 | A | `tabindex` above zero overrides document order |
+| keyboard: `focus-not-visible` | 2.4.7 | AA | no computed-style or pixel change when an element takes focus |
+| keyboard: `focus-indicator-thin` | 2.4.13 | AAA | the only indicator is an outline under 2 px (heuristic) |
+| keyboard: `focus-obscured`, `focus-partially-obscured` | 2.4.11, 2.4.12 | AA, AAA | the focused element is behind a sticky header, banner or overlay |
+| keyboard: `focus-changes-context` | 3.2.1 | A | receiving focus navigates the page |
+| keyboard: `skip-link-broken`, `skip-link-missing` | 2.4.1 | A, best practice | a skip link that goes nowhere, or a long nav with no way past it |
 
 Every check has a seeded defect page under [fixtures/](fixtures/) and a spec
 under [test/](test/) proving it fires.
+
+## Adopting with existing debt: the baseline
+
+`npx ramp-check baseline` records every current failure with a 180-day
+expiry. Later runs fail only on new findings and report how much debt
+remains. Expired entries fail by name until fixed or consciously renewed.
+See [docs/baseline.md](docs/baseline.md).
+
+## Consistency across pages
+
+The runner also checks what single-page tools cannot: every page title is
+distinct (2.4.2), and the primary navigation's accessible structure is the
+same on every page within a matrix cell (3.2.3).
 
 ## Exceptions: the allowlist
 
@@ -147,9 +184,11 @@ exception: the fixtures install a page init script that records every
 ## What this does not catch
 
 Automated tools find a fraction accessibility problems. This tool
-covers axe's share plus motion, reflow, and (soon) keyboard operation. It
-does not test screen-reader output, content quality, timing, or whether a
-flow makes sense. Most government accessibility standards require manual
+covers axe's share plus motion, reflow, and keyboard reachability and focus
+visibility. It does not test screen-reader output, content quality, timing,
+arrow-key or Enter/Space operation of custom widgets, or whether a flow makes
+sense. The keyboard audit's blind spots are listed in
+[docs/keyboard-limitations.md](docs/keyboard-limitations.md). Most government accessibility standards require manual
 testing and testing with people with disabilities as well; a green run here
 is a prerequisite, not compliance.
 
@@ -157,11 +196,12 @@ is a prerequisite, not compliance.
 
 | Phase | Deliverable |
 | --- | --- |
-| 0 (now) | axe, motion, reflow, allowlist, policy, fixtures, `a11yMatrix` |
+| 0 | axe, motion, reflow, allowlist, policy, fixtures, `a11yMatrix` |
 | 1 | keyboard audit: reachability, visible focus, not obscured, no trap, skip link |
 | 2 | config-driven runner and CLI for teams without specs; JSON and Markdown reports; baseline ratchet; site consistency |
-| 3 | GitHub Action with PR comment |
-| 4 | 1.0 |
+| 3 (now) | GitHub Action with PR comment |
+| 4 | 1.0: publish, Dependabot on axe, first adopters |
+| 5 | text spacing check; patterns module (dialogs, focus return, announcements, form errors); ESLint preset |
 
 ## Requirements
 
