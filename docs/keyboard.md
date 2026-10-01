@@ -55,7 +55,13 @@ identical one reports `focus-indicator-thin`, not `focus-not-visible`.
 
 **Obscured focus** samples the centre and four points a quarter of the way in
 from each corner, using `elementFromPoint` on the element's own root, so
-rounded corners and shadow roots do not produce false hits.
+rounded corners and shadow roots do not produce false hits. A hit counts as
+an occluder only when it is something other than the element, its
+descendants, or its ancestors — a link's own paragraph or a button's inner
+span is the element's rendering, not content stacked on top of it. Obscured
+reads are re-verified once after a 300 ms settle before they are reported: a
+real overlay persists, a one-frame layout race does not (a demoted read
+stays in the step's data).
 
 **Skip link** means a first Tab stop that is a fragment link whose text
 contains "skip" or "jump", or whose target is or sits inside the main

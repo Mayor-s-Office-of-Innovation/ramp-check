@@ -25,7 +25,11 @@
  *   an outline under 2 CSS px.
  * - focus-obscured (2.4.11 AA, WCAG 2.2) and focus-partially-obscured
  *   (2.4.12 AAA): `elementFromPoint` at the focused element's centre and
- *   corners resolves to something else, as under a sticky header or banner.
+ *   corners resolves to something other than the element, its descendants,
+ *   or its ancestors (an own-paragraph or inner-span hit is the element's
+ *   rendering, not an overlay), as under a sticky header or banner. Each
+ *   obscured read is re-verified once after a 300 ms settle before being
+ *   reported.
  * - skip-link-broken (2.4.1 A): the first Tab stop is a skip link whose
  *   activation does not move focus into its target.
  * - focus-changes-context (3.2.1 A): receiving focus navigated the page.
@@ -73,6 +77,7 @@
  * @property {boolean} screenshotChanged  set by the fallback when styles did not change
  * @property {boolean} hostStyleDiff  a shadow ancestor's computed styles changed on focus (delegated-focus surrogate ring)
  * @property {{ x: number, y: number, width: number, height: number } | null} hostRect  the outermost shadow host's rect, for the screenshot fallback
+ * @property {"none" | "partial" | "full" | "unknown"} [obscuredRecheck]  persisted obscured value after a settle; absent when not re-checked, "none" demotes the step
  */
 
 /**
@@ -205,6 +210,10 @@ function keyboardRuntime({ props }) {
     const out = {};
     for (const p of props) out[p] = cs.getPropertyValue(p);
     return out;
+  }
+  /** True when `other` is a strict descendant of `el` (el.contains(other) but not el itself). @param {Element} el @param {Element} other */
+  function containsExcludingSelf(el, other) {
+    return el !== other && el.contains(other);
   }
   /** The chain of shadow hosts from el's tree up to the document, outermost first. @param {Element} el */
   function hostChain(el) {
@@ -349,7 +358,11 @@ function keyboardRuntime({ props }) {
       let covered = 0;
       for (const [x, y] of points) {
         const hit = root.elementFromPoint(x, y);
-        if (!hit || (hit !== el && !el.contains(hit))) covered++;
+        // An occluder is something OTHER than the element, its descendants,
+        // or its ancestors: a hit on the element's own paragraph/link chain
+        // (parent/ancestor contains el) is the element's rendering, not
+        // content stacked on top of it.
+        if (!hit || (!containsExcludingSelf(el, hit) && !hit.contains(el))) covered++;
       }
       obscured = covered === 0 ? "none" : covered === points.length ? "full" : "partial";
     }
@@ -385,6 +398,48 @@ function keyboardRuntime({ props }) {
     /** @param {number} index */
     focus(index) {
       /** @type {any} */ (elements[index])?.focus?.();
+    },
+    /**
+     * Re-run the obscured sampling of a recorded step: focus the element,
+     * then — after a settle on a page-timer schedule — hit-test again.
+     * Two Chromium realities make a re-check necessary: at the instant
+     * focus arrives, a pending style/layout update can hit-test against a
+     * half-updated tree, and a protocol-driven read between frames can see
+     * a stale hit-test tree for up to about a second on an idle headless
+     * page. Reads on the page's own timer schedule (setTimeout) see the
+     * committed state; a real overlay (sticky header, banner) persists,
+     * a stale-tree read does not. Returns the persisted obscured value,
+     * or null if the element is gone (document replaced).
+     * @param {number} index
+     * @param {number} settleMs  time to wait after focus, timer-scheduled
+     * @returns {Promise<FocusStep["obscured"] | null>}
+     */
+    async recheck(index, settleMs) {
+      const el = /** @type {any} */ (elements[index]);
+      if (!el || !el.isConnected) return null;
+      el.focus();
+      await new Promise((r) => setTimeout(r, settleMs));
+      if (!el.isConnected) return null;
+      const r = el.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
+      const qx = r.width / 4;
+      const qy = r.height / 4;
+      const points = [
+        [r.x + r.width / 2, r.y + r.height / 2],
+        [r.x + qx, r.y + qy],
+        [r.right - qx, r.y + qy],
+        [r.x + qx, r.bottom - qy],
+        [r.right - qx, r.bottom - qy],
+      ].filter(([x, y]) => x >= 0 && y >= 0 && x < vw && y < vh);
+      if (!points.length || r.width <= 0 || r.height <= 0) return "unknown";
+      const root = /** @type {Document | ShadowRoot} */ (el.getRootNode());
+      let covered = 0;
+      for (const [x, y] of points) {
+        const hit = root.elementFromPoint(x, y);
+        if (!hit || (!containsExcludingSelf(el, hit) && !hit.contains(el))) covered++;
+      }
+      return covered === 0 ? "none" : covered === points.length ? "full" : "partial";
     },
     /** Describe the first Tab stop as a potential skip link. */
     skipLinkInfo() {
@@ -607,6 +662,25 @@ export async function keyboardAudit(page, opts = {}) {
     });
   }
 
+  // Obscured steps get a persistence re-check: refocus, settle 300 ms on
+  // the page's timer schedule, and hit-test again. A real overlay (sticky
+  // header, banner, dialog sheet) persists; a one-frame layout/transition
+  // race at the instant focus arrived does not. A demoted read stays
+  // visible in the step's data — never dropped silently.
+  const obscuredSteps = sequence.filter((s) => !s.isFrame && (s.obscured === "full" || s.obscured === "partial"));
+  for (const s of obscuredSteps) {
+    const persisted = /** @type {FocusStep["obscured"] | null} */ (
+      await page.evaluate(
+        ([i, ms]) => /** @type {any} */ (window).__rampCheckKeyboard.recheck(i, ms),
+        [s.index, 300],
+      )
+    );
+    if (persisted !== null) {
+      s.obscuredRecheck = persisted === "none" ? "none" : persisted;
+      if (persisted === "none") s.obscured = "none";
+    }
+  }
+
   for (const s of sequence) {
     if (s.index < 0) continue;
     // Focus inside an iframe belongs to the frame's own document; its
@@ -665,7 +739,7 @@ export async function keyboardAudit(page, opts = {}) {
         message: "entirely hidden behind other content when focused (sticky header, banner, or overlay)",
         wcag: { criterion: "2.4.11", level: "AA", version: "2.2" },
         help: `${understanding}focus-not-obscured-minimum.html`,
-        data: { rect: s.rect },
+        data: { rect: s.rect, obscuredRecheck: s.obscuredRecheck },
       });
     } else if (s.obscured === "partial") {
       add({
@@ -675,7 +749,7 @@ export async function keyboardAudit(page, opts = {}) {
         message: "partly hidden behind other content when focused",
         wcag: { criterion: "2.4.12", level: "AAA", version: "2.2" },
         help: `${understanding}focus-not-obscured-enhanced.html`,
-        data: { rect: s.rect },
+        data: { rect: s.rect, obscuredRecheck: s.obscuredRecheck },
       });
     }
   }
