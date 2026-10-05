@@ -25,7 +25,7 @@
   </header>
   <main id="main" tabindex="-1">
     <h1>Keyboard: clean</h1>
-    <p>A working skip link, five nav links, a roving-tabindex tablist, a radio group, a shadow-root button and a menu. Every control is reachable, every focus state is visible, nothing is obscured. The control page.</p>
+    <p>A working skip link, five nav links, a roving-tabindex tablist, a radio group, a shadow-root button, a menu and a closed disclosure with a link inside. Every control is reachable, every focus state is visible, nothing is obscured. The control page.</p>
     <div role="tablist" aria-label="Sections" id="tabs">
       <button role="tab" id="tab-a" aria-selected="true" aria-controls="panel-a" tabindex="0">Alpha</button>
       <button role="tab" id="tab-b" aria-selected="false" aria-controls="panel-b" tabindex="-1">Beta</button>
@@ -47,6 +47,10 @@
     </ul>
     <fancy-button></fancy-button>
     <p><button type="button" id="plain">Plain button</button></p>
+    <details id="more">
+      <summary id="more-summary">More about this page</summary>
+      <p>Closed by default: the <a id="folded" href="/clean.html">link in here</a> is reachable only once the disclosure is open.</p>
+    </details>
   </main>
   <footer><p>Fixture for ramp-check.</p></footer>
   <script>

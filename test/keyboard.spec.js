@@ -22,9 +22,21 @@ test.describe("keyboard audit", () => {
       "li:nth-of-type(1)",
       "fancy-button >>> button#shadow-btn",
       "button#plain",
+      "summary#more-summary",
     ]);
+    // The link inside the closed disclosure is not rendered, so it is not a candidate at all.
+    expect(result.candidates.map((c) => c.path)).not.toContain("a#folded");
     await expect(page.locator("#plain")).toBeFocused();
     expect(new URL(page.url()).hash).toBe("");
+  });
+
+  test("a link inside a disclosure counts once the disclosure is open", async ({ page }) => {
+    await page.goto("/keyboard-clean.html");
+    await page.evaluate(() => { document.querySelector("#more")?.setAttribute("open", ""); });
+    const result = await keyboardAudit(page);
+    expect(keys(result.findings)).toEqual([]);
+    expect(result.candidates.map((c) => c.path)).toContain("a#folded");
+    expect(result.sequence.map((s) => s.path).slice(-2)).toEqual(["summary#more-summary", "a#folded"]);
   });
 
   test("the clean page also passes the full check set at AAA", async ({ page }) => {

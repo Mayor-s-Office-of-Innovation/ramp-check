@@ -26,8 +26,9 @@ default. Turn it off with `checks: { keyboard: "off" }`.
 `select`, `textarea`, `summary`, `iframe`, `[contenteditable]`, media with
 controls), elements with a widget `role`, elements with an `onclick`
 attribute, and elements with `tabindex` of 0 or more. Disabled elements,
-elements inside `inert` or `aria-hidden="true"` subtrees, and elements with
-no rendered box are skipped. When a modal is open, a native `dialog:modal`
+elements inside `inert` or `aria-hidden="true"` subtrees, elements with
+no rendered box, and the contents of a closed `<details>` (its `summary`
+still counts) are skipped. When a modal is open, a native `dialog:modal`
 or a visible `aria-modal="true"` dialog, only its contents count.
 
 **Composite widgets** manage focus with arrow keys, so their members are
