@@ -50,9 +50,33 @@ export function domRuntime() {
     }
     return false;
   }
+  /**
+   * Inside a closed <details>, other than in its own <summary>: the content is not rendered
+   * (Chromium keeps a box under content-visibility, so it still has client rects) and cannot be
+   * reached by design. Crosses shadow boundaries; the summary of a closed details stays visible.
+   * @param {Element} el
+   */
+  function inClosedDetails(el) {
+    /** @type {Node} */
+    let child = el;
+    /** @type {Node | null} */
+    let node = el.parentNode;
+    while (node) {
+      if (node instanceof Element && node.localName === "details" && !node.hasAttribute("open")) {
+        if (node.querySelector(":scope > summary") !== child) return true;
+      }
+      if (node instanceof Element) child = node;
+      node = node instanceof ShadowRoot ? node.host : node.parentNode;
+    }
+    return false;
+  }
   /** @param {Element} el */
   function visible(el) {
     if (!el.getClientRects().length) return false;
+    // checkVisibility sees content-visibility: hidden ancestors (a closed details in Chromium)
+    // that getComputedStyle does not; opacity and off-screen positioning still count as visible.
+    if (typeof el.checkVisibility === "function" && !el.checkVisibility({ visibilityProperty: true })) return false;
+    if (inClosedDetails(el)) return false;
     const cs = getComputedStyle(el);
     return cs.visibility !== "hidden" && cs.display !== "none";
   }

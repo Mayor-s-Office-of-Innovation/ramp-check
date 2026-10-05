@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- The contents of a closed `<details>` are no longer reported as
+  `keyboard-unreachable`. Chromium keeps a layout box for them under
+  `content-visibility`, so the rendered-box test passed; visibility now also
+  asks `checkVisibility()` and walks up for a closed disclosure (the summary
+  itself stays a candidate). Fixture: a closed disclosure with a link on
+  fixtures/keyboard-clean.html.
+
 - Obscured-focus sampling no longer counts the element's own ancestors as
   occluders (`elementFromPoint` at a link inside a paragraph hit the
   paragraph, which contains the link — reported as focus-obscured). An

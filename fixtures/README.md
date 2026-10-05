@@ -11,7 +11,7 @@ it still catches it. A check without a page here is not done.
 | `axe-contrast.html` | axe | Text at 4.5:1 (AA passes, AAA fails), text at 2.5:1 (fails AA), an image with no alt. |
 | `axe-fade-in.html` | axe | Text fading in. Not a defect: proves the settle wait prevents a bogus contrast failure. |
 | `reflow-overflow.html` | reflow | A fixed 600 px element that forces horizontal scrolling at 320 px. |
-| `keyboard-clean.html` | keyboard | Working skip link, roving-tabindex tablist and menu, radio group, shadow-root button. Must stay quiet. |
+| `keyboard-clean.html` | keyboard | Working skip link, roving-tabindex tablist and menu, radio group, shadow-root button, a closed `<details>` with a link inside (its summary is reached; the link is not a candidate until it is open). Must stay quiet. |
 | `keyboard-unreachable.html` | keyboard | A div with onclick, a span with role="button" and no tabindex, a link with tabindex="-1", a button with tabindex="2". |
 | `keyboard-trap.html` | keyboard | An input that swallows Tab. |
 | `keyboard-focus-invisible.html` | keyboard | A button with no focus indicator, one with a 1 px outline, one with a proper box-shadow ring. |
