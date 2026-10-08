@@ -18,10 +18,14 @@ it still catches it. A check without a page here is not done.
 | `keyboard-delegated-focus.html` | keyboard | OTP-style widgets whose visible ring is drawn on a surrogate segment while Tab lands on a 1×1 invisible proxy input (`delegatesFocus`). Must stay quiet. One ringless widget must still fail. |
 | `keyboard-focus-obscured.html` | keyboard | Links fully and partly under an 80 px fixed banner. |
 | `keyboard-skip-link.html` | keyboard | A skip link whose target id does not exist. |
-| `keyboard-no-skip-link.html` | keyboard | Five nav links before main and no skip link. |
+| `keyboard-banner-ring.html` | keyboard | A cookie banner whose controls form a closed Tab ring before the page; the audit reports one honest ring finding, not unreachable elements behind it. |
+| `keyboard-rerender.html` | keyboard | Ten ghost links swapped for fresh ones mid-audit; replaced candidates are dropped with one annotation, not blamed. |
+| `keyboard-roving-tabs.html` | keyboard | Correct roving-tabindex tabs (selected one Tab-reachable, siblings arrow-key-only, no tablist wrapper needed). Must stay quiet. |
+| `keyboard-state-holder.html` | keyboard | A visually-hidden checkbox toggled by a reachable card button (techcrunch idiom — must not be reported unreachable) beside an orphan hidden checkbox with no driver (must be reported). |
+| `keyboard-overlay-transparent.html` | keyboard | Two stretched-link cards: a transparent whole-card overlay (paints nothing; must stay quiet — the nuxt.com class) and an opaque overlay that genuinely hides the CTA's focus ring (must fire). |
 | `keyboard-iframe.html` | keyboard | An iframe with three buttons. Not a defect: Tab moving through it must not read as a trap. |
 | `keyboard-focus-navigates.html` | keyboard | A select that navigates when it receives focus. |
-| `text-spacing-clipped.html` | textSpacing | A fixed-height card that clips at line-height 1.5; a pre-truncated box and a fluid box that must not be reported. |
+| `text-spacing-clipped.html` | textSpacing | A fixed-height card and a nextjs-class ellipsis chip that clip once spacing is raised (fires, via text-crossing / ellipsis); a pre-truncated box, a fluid box, an aria-hidden-deco hero and an sr-only-in-clipped-box holder that must stay quiet. |
 | `patterns-dialog.html` | patterns | A native modal done right, and a class-toggled div that moves no focus, leaks Tab, ignores Escape and returns nothing. |
 | `patterns-live.html` | patterns | A status region that announces, a plain div that does not, and an alert created with its content. |
 | `patterns-form.html` | patterns | Errors identified with text and focus; a red border alone; native browser validation. |

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: roving tabindex tabs done right</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    [role=tab][aria-selected=true] { border-bottom: 2px solid #0b4f8a; }
+    [role=tabpanel]:not([hidden]) { padding: .5rem 0; }
+  </style>
+</head>
+<body>
+  <header><nav aria-label="Primary"><a href="/clean.html">Home</a></nav></header>
+  <main id="main">
+    <h1>Correct roving-tabindex tabs</h1>
+    <p>Three tabs. The selected one is Tab-reachable; the other two move focus
+       with arrow keys (a correct tabs pattern, like MDN's about page and
+       Angular's docs tablists: tabindex=-1 unselected siblings). These must
+       NOT be reported as unreachable.</p>
+    <div role="tablist" aria-label="Sections">
+      <button role="tab" id="t1" aria-selected="true" aria-controls="p1" tabindex="0">Alpha</button>
+      <button role="tab" id="t2" aria-selected="false" aria-controls="p2" tabindex="-1">Beta</button>
+      <button role="tab" id="t3" aria-selected="false" aria-controls="p3" tabindex="-1">Gamma</button>
+    </div>
+    <div role="tabpanel" id="p1" aria-labelledby="t1">Alpha panel</div>
+    <div role="tabpanel" id="p2" aria-labelledby="t2" hidden>Beta panel</div>
+    <div role="tabpanel" id="p3" aria-labelledby="t3" hidden>Gamma panel</div>
+    <script>
+      // Arrow keys move tab focus (the standard pattern the audit must know).
+      const tabs = [...document.querySelectorAll("[role=tab]")];
+      const tablist = document.querySelector("[role=tablist]");
+      tablist.addEventListener("keydown", (e) => {
+        const i = tabs.indexOf(document.activeElement);
+        if (i < 0) return;
+        let next = null;
+        if (e.key === "ArrowRight") next = tabs[(i + 1) % tabs.length];
+        if (e.key === "ArrowLeft") next = tabs[(i - 1 + tabs.length) % tabs.length];
+        if (next) { e.preventDefault(); select(next); next.focus(); }
+      });
+      function select(tab) {
+        for (const t of tabs) {
+          t.setAttribute("aria-selected", String(t === tab));
+          t.setAttribute("tabindex", t === tab ? "0" : "-1");
+          document.getElementById(t.getAttribute("aria-controls")).hidden = t !== tab;
+        }
+      }
+      tabs.forEach((t) => t.addEventListener("click", () => select(t)));
+    </script>
+  </main>
+</body>
+</html>

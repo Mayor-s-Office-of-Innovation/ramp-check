@@ -63,7 +63,6 @@ reflow: { width: 320 },                // CSS px
 keyboard: {
   maxSteps: 500,                       // Tab budget (default 2 × controls + 20)
   screenshotFallback: true,            // pixel-compare when styles do not change
-  skipLinkThreshold: 3,                // focusable elements before main that warrant a skip link
 },
 ```
 

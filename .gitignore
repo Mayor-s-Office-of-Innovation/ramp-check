@@ -1,6 +1,7 @@
 types/
 test-results/
 ramp-check-report/
+sweep/
 playwright-report/
 .DS_Store
 CLAUDE.local.md

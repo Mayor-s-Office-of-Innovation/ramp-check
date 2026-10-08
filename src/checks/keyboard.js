@@ -10,7 +10,13 @@
  *   `[role]` widget, `[onclick]` element, or `[tabindex]`) never received
  *   focus. Members of a composite widget (tablist, menu, listbox, radio
  *   group, tree, grid, toolbar) are exempt once any member is reached, since
- *   arrow keys move focus inside those.
+ *   arrow keys move focus inside those, and so are roving-tabindex tabs
+ *   (`role=tab` minus the `tabindex=0` selected one) once any sibling tab is
+ *   reached. Two honesty guards before blaming a candidate: candidates whose
+ *   node left the document since the inventory (SPA re-render) are dropped,
+ *   and when a traversal cycles inside a small ring — a consent banner, a
+ *   carousel — or a fresh re-walk still misses over half the candidates, one
+ *   annotated finding about the ring replaces per-element blame.
  * - positive-tabindex (2.4.3 A): a tabindex above zero overrides document order.
  * - keyboard-trap (2.1.2 A): Tab stopped moving focus, or the sequence never
  *   terminated or cycled within the step budget.
@@ -24,19 +30,23 @@
  * - focus-indicator-thin (2.4.13 AAA, heuristic): the only visible change is
  *   an outline under 2 CSS px.
  * - focus-obscured (2.4.11 AA, WCAG 2.2) and focus-partially-obscured
- *   (2.4.12 AAA): `elementFromPoint` at the focused element's centre and
- *   corners resolves to something other than the element, its descendants,
- *   or its ancestors (an own-paragraph or inner-span hit is the element's
- *   rendering, not an overlay), as under a sticky header or banner. Each
- *   obscured read is re-verified once after a 300 ms settle before being
- *   reported.
+ *   (2.4.12 AAA): `elementsFromPoint` at the focused element's centre and
+ *   corners, taking the top-most element that actually paints (a transparent
+ *   stretched-link span wins the raw hit-test without rendering anything, so
+ *   it cannot hide the element or its indicator) resolving to something other
+ *   than the element, its descendants, or its ancestors (an own-paragraph or
+ *   inner-span hit is the element's rendering, not an overlay), as under a
+ *   sticky header or banner. Each obscured read is re-verified once after a
+ *   300 ms settle before being reported.
  * - skip-link-broken (2.4.1 A): the first Tab stop is a skip link whose
  *   activation does not move focus into its target.
  * - focus-changes-context (3.2.1 A): receiving focus navigated the page.
  *   The audit stops there, since the document it was inspecting is gone.
- * - skip-link-missing (best practice): three or more focusable elements
- *   precede the main landmark and no skip link bypasses them. axe's `bypass`
- *   rule covers the criterion itself, which landmarks also satisfy.
+ *   (There is no skip-link-missing rule: axe's `bypass` rule covers the
+ *   criterion, and a first-Tab-stop-only heuristic reads fresh-profile
+ *   consent banners as missing skip links — disproven on gov.uk, where the
+ *   banner-free page makes the skip link the first stop. Multi-site sweep,
+ *   Oct 2026.)
  *
  * Verified in Chromium (Playwright 1.63, 2026-10-01): focusing `body` resets
  * the sequential focus starting point; `el.focus()` after a keyboard event
@@ -61,7 +71,6 @@
  * @property {number | null} tabindex
  * @property {string | null} composite  path of the composite container, if any
  * @property {string | null} radioGroup
- * @property {boolean} beforeMain       precedes the main landmark in document order
  */
 
 /**
@@ -78,13 +87,13 @@
  * @property {boolean} hostStyleDiff  a shadow ancestor's computed styles changed on focus (delegated-focus surrogate ring)
  * @property {{ x: number, y: number, width: number, height: number } | null} hostRect  the outermost shadow host's rect, for the screenshot fallback
  * @property {"none" | "partial" | "full" | "unknown"} [obscuredRecheck]  persisted obscured value after a settle; absent when not re-checked, "none" demotes the step
+ * @property {string} [identity]  stable identity for uninventoried steps (index < 0): tag + attributes + sibling position
  */
 
 /**
  * @typedef {object} KeyboardAuditOptions
  * @property {number} [maxSteps]            Tab budget (default: 2 × candidates + 20, min 50)
  * @property {boolean} [screenshotFallback] pixel-compare when computed styles do not change (default true)
- * @property {number} [skipLinkThreshold]   focusable elements before main that warrant a skip link (default 3)
  */
 
 /**
@@ -95,6 +104,7 @@
  * @property {"end" | "cycle" | "trap" | "budget"} terminated
  * @property {string | null} modal   path of the open modal dialog that scoped the audit
  * @property {{ present: boolean, path?: string, works?: boolean }} skipLink
+ * @property {{ path: string, size: number } | null} [ring]  when the traversal ended in a closed ring: the path where it closed and its stop count
  */
 
 const FOCUS_PROPS = [
@@ -201,6 +211,46 @@ function keyboardRuntime({ props }) {
     const cs = getComputedStyle(el);
     return cs.visibility !== "hidden" && cs.display !== "none";
   }
+  /**
+   * Does the element paint anything at its box? A transparent stretched-link
+   * overlay (whole-card click target) wins the hit-test without rendering —
+   * the painted state of the focused element below stays visible, so such a
+   * layer must not count as an occluder.
+   * @param {Element} el
+   */
+  function paints(el) {
+    const cs = getComputedStyle(el);
+    if (cs.opacity !== "1") return true; // anything below 1 changes the pixels beneath
+    if (cs.visibility === "hidden" || cs.display === "none") return false;
+    if ((el.textContent ?? "").trim() !== "" || (el instanceof HTMLInputElement && el.type !== "hidden") || (el instanceof HTMLTextAreaElement) || (el instanceof HTMLSelectElement)) return true;
+    const bg = cs.backgroundColor;
+    if (bg && !/rgba\(\s*,\s*,\s*,\s*0\)|^transparent$/i.test(bg) && !/ 0\)$/.test(bg)) return true;
+    if (cs.backgroundImage !== "none") return true;
+    for (const side of ["Top", "Right", "Bottom", "Left"]) {
+      if (Number.parseFloat(cs[`border-${side.toLowerCase()}-width`]) > 0 && !/^0|none$/.test(cs[`border-${side.toLowerCase()}-style`] ?? "none")) return true;
+    }
+    if (cs.boxShadow !== "none" && cs.boxShadow !== "") return true;
+    if (cs.outlineStyle !== "none" && (Number.parseFloat(cs.outlineWidth) || 0) > 0) return true;
+    // A replaced element (img, video, canvas, iframe, svg) always paints.
+    if (["img", "video", "canvas", "iframe", "svg", "picture"].includes(el.localName)) return true;
+    // Stretched-link overlays usually paint through a ::before/::after on an
+    // otherwise paintless element; the pseudo wins the stacking order with
+    // the element's own geometry.
+    for (const pseudo of ["::before", "::after"]) {
+      const ps = getComputedStyle(el, pseudo);
+      if (ps.content === "none" || ps.content === "" || ps.display === "none") continue;
+      if (ps.opacity !== "1") return true;
+      const pbg = ps.backgroundColor;
+      if (pbg && !/rgba\(\s*,\s*,\s*,\s*0\)|^transparent$/i.test(pbg) && !/ 0\)$/.test(pbg)) return true;
+      if (ps.backgroundImage !== "none") return true;
+      for (const side of ["Top", "Right", "Bottom", "Left"]) {
+        if (Number.parseFloat(ps[`border-${side.toLowerCase()}-width`]) > 0 && !/^0|none$/.test(ps[`border-${side.toLowerCase()}-style`] ?? "none")) return true;
+      }
+      if (ps.boxShadow !== "none" && ps.boxShadow !== "") return true;
+      if (ps.outlineStyle !== "none" && (Number.parseFloat(ps.outlineWidth) || 0) > 0) return true;
+    }
+    return false;
+  }
   /** Light-DOM-then-host ancestor walk for closest(). @param {Element} el @param {string} sel */
   function closestComposed(el, sel) {
     /** @type {Element | null} */
@@ -218,6 +268,12 @@ function keyboardRuntime({ props }) {
     if (el.matches(":disabled")) return true;
     if (closestComposed(el, "[inert], [aria-hidden=true]")) return true;
     if (el.localName === "option" || el.closest("select")) return true;
+    // A zero-box control renders nothing (squarespace's mobile-only
+    // navigation buttons are 0×0 at desktop): a keyboard user cannot miss
+    // an invisible control, and with tabindex=-1 the author has already
+    // taken it out of tab order. Not a reachability defect.
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return true;
     if (!visible(el)) return true;
     return false;
   }
@@ -275,16 +331,12 @@ function keyboardRuntime({ props }) {
   function inventory() {
     const modal = openModal();
     const scope = modal ?? document;
-    const main = document.querySelector("main, [role=main]");
     const all = allElements().filter((el) => modal ? modal.contains(el) || el.getRootNode() !== document : true);
     elements = [];
     resting = [];
     /** @type {Candidate[]} */
     const candidates = [];
-    let seenMain = false;
     for (const el of all) {
-      if (el === main) seenMain = true;
-      if (main && main.contains(el)) seenMain = true;
       const tabindexAttr = el.getAttribute("tabindex");
       const tabindex = tabindexAttr === null ? null : Number.parseInt(tabindexAttr, 10);
       /** @type {Candidate["reason"] | null} */
@@ -311,11 +363,10 @@ function keyboardRuntime({ props }) {
         tabindex: Number.isNaN(tabindex) ? null : tabindex,
         composite: composite ? pathFor(composite) : null,
         radioGroup: radio,
-        beforeMain: !!main && !seenMain,
       });
     }
     void scope;
-    return { candidates, modal: modal ? pathFor(modal) : null, hasMain: !!main };
+    return { candidates, modal: modal ? pathFor(modal) : null };
   }
 
   /** @returns {FocusStep} */
@@ -325,6 +376,11 @@ function keyboardRuntime({ props }) {
       return { index: -1, path: "body", isBody: true, isFrame: false, styleDiff: [], outlineWidth: 0, obscured: "unknown", rect: null, screenshotChanged: false, hostStyleDiff: false, hostRect: null };
     }
     const index = elements.indexOf(el);
+    // Uninventoried steps (re-rendered subtrees, script-added widgets) use a
+    // stable identity tag so two visits to the same replacement node compare
+    // equal by identity, not by colliding path: the generic "a" path made
+    // distinct links look like a cycle and ended traversals early.
+    const identity = index < 0 ? identityOf(el) : undefined;
     const styleDiff = [];
     let outlineWidth = 0;
     let hostStyleDiff = false;
@@ -381,7 +437,18 @@ function keyboardRuntime({ props }) {
       const root = /** @type {Document | ShadowRoot} */ (el.getRootNode());
       let covered = 0;
       for (const [x, y] of points) {
-        const hit = root.elementFromPoint(x, y);
+        const hits = root.elementsFromPoint(x, y);
+        // The top-most PAINTING layer alone decides coverage. Transparent
+        // stretched-link overlays win the raw hit-test without rendering
+        // (nuxt.com FP); when nothing in the stack paints at this point,
+        // nothing visually covers the element — the point is not covered.
+        let painted = null;
+        for (const h of hits) {
+          if (!paints(h)) continue;
+          painted = h;
+          break;
+        }
+        const hit = painted;
         // An occluder is something OTHER than the element, its descendants,
         // or its ancestors: a hit on the element's own paragraph/link chain
         // (parent/ancestor contains el) is the element's rendering, not
@@ -402,12 +469,75 @@ function keyboardRuntime({ props }) {
       screenshotChanged: false,
       hostStyleDiff,
       hostRect,
+      identity,
     };
+  }
+
+  /**
+   * Stable identity for an element the inventory missed: document position +
+   * tag + salient attributes, stable across re-render swaps of unchanged
+   * nodes and distinct for sibling links with identical selectors.
+   * @param {Element} el
+   */
+  function identityOf(el) {
+    const bits = [el.localName];
+    if (el.id) bits.push(`#${el.id}`);
+    const cls = Array.from(el.classList).slice(0, 2).join(".");
+    if (cls) bits.push(`.${cls}`);
+    for (const a of ["role", "type", "name", "tabindex", "aria-label"]) {
+      const v = el.getAttribute(a);
+      if (v !== null) bits.push(`[${a}=${v}]`);
+    }
+    // Position among same-selector siblings makes distinct same-tag links distinct.
+    const rootNode = el.getRootNode();
+    const parent = el.parentElement ?? (rootNode instanceof ShadowRoot ? rootNode.host : null);
+    if (parent) {
+      const same = Array.from(parent.children).filter((c) => c.localName === el.localName);
+      if (same.length > 1) bits.push(`:nth-of-type(${same.indexOf(el) + 1})`);
+      // Distinct CAROUSEL CLONES share tag+classes+aria — discriminate by
+      // position in the track so consecutive clone Tabs never read as a
+      // repeat (squarespace-class: the trap was two clones with one identity).
+      if (el.parentElement && el.parentElement.matches("[class*=carousel], [class*=track]")) {
+        bits.push(`:track-of-type(${Array.from(el.parentElement.children).indexOf(el)})`);
+      }
+      // Sibling identity for parents without distinguishing selectors.
+      const pBits = parent.id ? [`#${parent.id}`] : [];
+      const pCls = Array.from(parent.classList).slice(0, 2).join(".");
+      if (pCls) pBits.push(`.${pCls}`);
+      if (pBits.length) bits.unshift(`parent=${pBits.join("")}`);
+    }
+    return bits.join("");
   }
 
   w.__rampCheckKeyboard = {
     inventory,
     step,
+    /** Re-verify a missed candidate still exists before blaming it. @param {number} index */
+    connected(index) {
+      const el = elements[index];
+      return el ? el.isConnected : false;
+    },
+    /** Roving-tabindex scan for one candidate: is its role=tab sibling group
+     * (tablist or shared parent) holding reachability on the selected/tabindex=0
+     * member? Returns the holder's candidate index so the audit can exempt the
+     * unselected tabs only when their holder was actually reached.
+     * @param {number} index */
+    rovingGroup(index) {
+      const el = elements[index];
+      if (!el || (el.getAttribute("role") ?? "") !== "tab") return null;
+      const scope = el.closest("[role=tablist]") ?? el.parentElement;
+      if (!scope) return null;
+      const tabs = Array.from(scope.querySelectorAll('[role="tab"]'));
+      if (tabs.length < 2 || !tabs.includes(el)) return null;
+      const selected = tabs.filter((t) => (t.getAttribute("aria-selected") ?? "") === "true");
+      const ti0 = tabs.filter((t) => (parseInt(t.getAttribute("tabindex") ?? "1", 10) || 1) === 0);
+      // A roving group has exactly one reachable member (tabindex=0 or the selected one).
+      const holder = selected.length === 1 ? selected[0] : ti0.length === 1 ? ti0[0] : null;
+      if (!holder) return null;
+      const holderIndex = elements.indexOf(holder);
+      if (holderIndex < 0) return null;
+      return { holderPath: pathFor(holder), holderIndex, size: tabs.length };
+    },
     /** Put the sequential focus starting point at the top of the document. */
     reset() {
       const anchor = openModal() ?? document.body;
@@ -460,7 +590,16 @@ function keyboardRuntime({ props }) {
       const root = /** @type {Document | ShadowRoot} */ (el.getRootNode());
       let covered = 0;
       for (const [x, y] of points) {
-        const hit = root.elementFromPoint(x, y);
+        const hits = root.elementsFromPoint(x, y);
+        // The top-most PAINTING layer decides coverage; transparent stretched
+        // overlays win the raw hit-test without rendering (nuxt.com FP).
+        let painted = null;
+        for (const h of hits) {
+          if (!paints(h)) continue;
+          painted = h;
+          break;
+        }
+        const hit = painted ?? hits[0];
         if (!hit || (!containsExcludingSelf(el, hit) && !hit.contains(el))) covered++;
       }
       return covered === 0 ? "none" : covered === points.length ? "full" : "partial";
@@ -482,6 +621,104 @@ function keyboardRuntime({ props }) {
       const target = document.getElementById(decodeURIComponent(href.slice(1)));
       const el = deepActive();
       return !!target && !!el && (el === target || target.contains(el));
+    },
+    /**
+     * State-holder discovery, Playwright-orchestrated phase 1. For a
+     * tabindex=-1 input the traversal missed, list the focusable buttons and
+     * text-entry inputs inside the same <form> that could drive its state;
+     * the audit driver probes them with the real keyboard (a dispatched
+     * KeyboardEvent is untrusted and the techcrunch handler ignored it).
+     * Also reports a <label for> pairing — a reachable label exempts
+     * outright; a visually-hidden label defers to the keyboard probe.
+     * @param {number} index
+     */
+    stateHolderDrivers(index) {
+      const el = elements[index];
+      if (!el || !el.isConnected || (parseInt(el.getAttribute("tabindex") ?? "1", 10) || 0) >= 0) return { drivers: [], labelPair: false };
+      const form = el.closest("form");
+      const id = el.getAttribute("id");
+      let labelPair = false;
+      if (id) {
+        const root = el.getRootNode();
+        for (const label of /** @type {Document | ShadowRoot} */ (root).querySelectorAll("label[for]")) {
+          if ((label.getAttribute("for") ?? "").trim() === id) {
+            labelPair = true;
+            const li = label instanceof HTMLElement && elements.includes(label) ? elements.indexOf(label) : -1;
+            if (li >= 0) return { drivers: [{ index: li, kind: "label" }], labelPair: true };
+            break;
+          }
+        }
+      }
+      if (!form || !(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return { drivers: [], labelPair };
+      const drivers = elements
+        .map((c, i) => ({ c, i }))
+        .filter(({ c }) =>
+          form.contains(c) && c !== el &&
+          (c instanceof HTMLButtonElement || (c instanceof HTMLInputElement && (c.type === "checkbox" || c.type === "radio"))));
+      return { drivers: drivers.map(({ i }) => ({ index: i, kind: "button" })), labelPair };
+    },
+    /** Read an input's toggle state. @param {number} index */
+    stateOf(index) {
+      const el = /** @type {any} */ (elements[index]);
+      if (!el || !el.isConnected) return null;
+      return el.type === "checkbox" || el.type === "radio" ? el.checked : el.value;
+    },
+    /** Is the given candidate index inside a carousel-ish container? An
+     * auto-scrolling track repositions clones under focus, so a repeat
+     * there is scroll churn, not a 2.1.2 trap (squarespace-class; the user
+     * tabbed the same row cleanly). @param {number} index */
+    inCarousel(index) {
+      const el = elements[index];
+      if (!el) return el?.isConnected ? true : false;
+      return !!el.closest("[class*=carousel], [class*=swiper], [class*=slider-track], [class*=track]") || !!el.closest("[aria-roledescription=carousel]");
+    },
+    /**
+     * Clone-of-a-reached check for a missed tabindex=-1 candidate: carousels
+     * duplicate their cards (infinite scroll). A missed `tabindex=-1` card
+     * whose text and href match a REACHED candidate is a clone of content a
+     * keyboard user has already been offered — no function is missing, so
+     * "unreachable" would be a false positive. Returns the matched index or
+     * null.
+     * @param {number} index
+     * @param {number[]} reachableIndexes
+     */
+    cloneOfReached(index, reachableIndexes) {
+      const el = elements[index];
+      if (!el || (parseInt(el.getAttribute("tabindex") ?? "1", 10) || 0) >= 0) return null;
+      // Arrow-key carousel pattern (squarespace king-carousel): the whole
+      // track marks cards tabindex=-1 except one roving holder, and the
+      // prev/next buttons offer keyboard entry. A missed card inside such a
+      // track — where the track holds a reachable control and its siblings
+      // are its traversal targets — is arrow-key-reachable by design, like
+      // the tablist exemption.
+      const track = el.closest("[class*=carousel], [class*=swiper], [class*=track], [aria-roledescription=carousel]");
+      if (track) {
+        const trackBtns = [...track.querySelectorAll("button, [role=button], a[href]")];
+        const trackTi0 = trackBtns.filter((b) => (parseInt(b.getAttribute("tabindex") ?? "1", 10) || 0) >= 0);
+        const prevNext = trackBtns.filter((b) => /prev|next/i.test(b.className + " " + (b.getAttribute("aria-label") ?? "")));
+        if (trackTi0.length && (trackTi0.length >= 2 || prevNext.length)) return index; // self-marker: arrow-key pattern, exempt in the audit
+      }
+      const text = (el.textContent ?? "").trim();
+      const href = el.getAttribute("href") ?? "";
+      if (!text) return null;
+      for (const i of reachableIndexes) {
+        const other = elements[i];
+        if (!other || other === el || !other.isConnected) continue;
+        if ((other.getAttribute("tabindex") ?? "0") === "-1") continue; // reached element must itself be tab-reachable
+        if ((other.textContent ?? "").trim() === text && other.getAttribute("href") === href) {
+          const inCar = !!el.closest("[class*=carousel], [class*=swiper], [class*=track]");
+          const otherInCar = !!other.closest("[class*=carousel], [class*=swiper], [class*=track]");
+          if (inCar && otherInCar) return i;
+        }
+      }
+      return null;
+    },
+    /** Restore a state-holder probe's side effect. @param {number} index @param {boolean | string} value */
+    setState(index, value) {
+      const el = /** @type {any} */ (elements[index]);
+      if (!el || !el.isConnected) return;
+      if (el.type === "checkbox" || el.type === "radio") el.checked = value;
+      else el.value = value;
     },
     saveState() {
       const el = deepActive();
@@ -506,7 +743,7 @@ function keyboardRuntime({ props }) {
 export async function keyboardAudit(page, opts = {}) {
   await page.evaluate(keyboardRuntime, { props: FOCUS_PROPS });
   const saved = await page.evaluate(() => /** @type {any} */ (window).__rampCheckKeyboard.saveState());
-  const { candidates, modal, hasMain } = /** @type {{ candidates: Candidate[], modal: string | null, hasMain: boolean }} */ (
+  const { candidates, modal } = /** @type {{ candidates: Candidate[], modal: string | null }} */ (
     await page.evaluate(() => /** @type {any} */ (window).__rampCheckKeyboard.inventory())
   );
   const maxSteps = opts.maxSteps ?? Math.max(50, candidates.length * 2 + 20);
@@ -517,7 +754,15 @@ export async function keyboardAudit(page, opts = {}) {
   /** @type {KeyboardAuditResult["terminated"]} */
   let terminated = "budget";
   let repeats = 0;
+  // Count of carousel-churn repeat suppressions (each one is evidence the
+  // page re-rendered focusable content mid-traversal).
+  let carouselRepeats = 0;
   let wrapped = false;
+  /** @type {KeyboardAuditResult["ring"]} */
+  let ring = null;
+  // One re-inventory is allowed when the traversal lands twice on an
+  // uninventoried element (a carousel clone) — inventory churn, not a trap.
+  let reInventoried = false;
 
   /** @type {Finding | null} */
   let contextChange = null;
@@ -555,9 +800,11 @@ export async function keyboardAudit(page, opts = {}) {
       terminated = "end";
       break;
     }
-    // Identity: candidate index when inventoried, else the path.
+    // Identity: candidate index when inventoried, else the stable identity tag
+    // (two visits to the same re-rendered node are the same stop; two distinct
+    // sibling links with a generic "a" path are not).
     const same = (/** @type {FocusStep} */ a, /** @type {FocusStep} */ b) =>
-      a.index >= 0 || b.index >= 0 ? a.index === b.index : a.path === b.path;
+      a.index >= 0 || b.index >= 0 ? a.index === b.index : (a.identity ?? a.path) === (b.identity ?? b.path);
     if (step.isBody) {
       // Past the last element. Starting from body walks the tabindex-0
       // elements in document order; positive-tabindex elements only come up
@@ -572,15 +819,61 @@ export async function keyboardAudit(page, opts = {}) {
     const prev = sequence.at(-1);
     if (prev && same(prev, step)) {
       if (step.isFrame) continue; // Tab is moving through the iframe's contents
+      // A repeat on an UNINVENTORIED element is not a trap: the node entered
+      // the DOM after the inventory (a carousel clone the auto-scroll keeps
+      // under focus — squarespace-class, user walked through cleanly).
+      // Re-inventory once instead; if a fresh pass inventoried it, traversal
+      // continues with the element as a known candidate (and its reachability
+      // becomes a normal observed fact).
+      if (step.index < 0 && prev.index < 0 && !reInventoried) {
+        reInventoried = true;
+        const fresh = /** @type {{ candidates: Candidate[], modal: string | null }} */ (
+          await page.evaluate(() => /** @type {any} */ (window).__rampCheckKeyboard.inventory())
+        );
+        const again = await page.evaluate(() => /** @type {any} */ (window).__rampCheckKeyboard.step());
+        if (again && again.index >= 0) {
+          candidates.length = 0;
+          candidates.push(...fresh.candidates);
+          // The clone is now candidate idx N. Tab once more, read the next
+          // stop WITHOUT trapping: if the same clone still holds focus
+          // (scroll-into-view gluing) we record it as ONE observed stop and
+          // let further repeats decide; most auto-scroll carousels release
+          // it within two Tabs (user walked through cleanly).
+        }
+        repeats = 0;
+        continue;
+      }
       repeats += 1;
       if (repeats >= 2) {
+        // A repeat inside an auto-scrolling carousel is churn, not a trap:
+        // the track repositions focusable clones under focus while the audit
+        // reads styles between Tabs (squarespace-class; a real user walks
+        // through cleanly). Treat as an observed stuck stop, no verdict.
+        const carouselStuck = step.index >= 0
+          ? await page.evaluate((i) => /** @type {any} */ (window).__rampCheckKeyboard.inCarousel(i), step.index)
+          : (step.identity ?? step.path).includes("carousel");
+        if (carouselStuck) {
+          repeats = 0;
+          carouselRepeats += 1;
+          continue;
+        }
         terminated = "trap";
         break;
       }
       continue;
     }
     repeats = 0;
-    if (sequence.some((s) => same(s, step))) {
+    const ringAt = sequence.findIndex((s) => same(s, step));
+    if (ringAt >= 0) {
+      // A closed ring. When the ring embraces most of the inventoried
+      // candidates and the traversal already wrapped through body, this is
+      // the page's real focus cycle (end). A small ring holding few of the
+      // candidates is an overlay/carousel loop that ended the traversal
+      // early — remembered so the unreachable gate can tell the truth.
+      const ringSize = sequence.length - ringAt;
+      const ringCandidates = new Set(sequence.slice(ringAt).map((s) => s.index).filter((i) => i >= 0));
+      const smallRing = ringSize <= 6 && candidates.length > 0 && ringCandidates.size / candidates.length < 0.6;
+      ring = smallRing ? { path: sequence[ringAt].path, size: ringSize } : null;
       terminated = wrapped ? "end" : "cycle";
       break;
     }
@@ -626,18 +919,35 @@ export async function keyboardAudit(page, opts = {}) {
   if (terminated === "trap" || terminated === "budget") {
     const last = sequence.at(-1);
     const loop = terminated === "trap" ? [last?.path ?? "unknown"] : [...new Set(sequence.slice(-10).map((s) => s.path))];
-    add({
-      check: "keyboard",
-      rule: "keyboard-trap",
-      target: loop[0],
-      message:
-        terminated === "trap"
-          ? "Tab no longer moves focus away from this element"
-          : `focus never left the page or returned to the start within ${maxSteps} Tab presses (last stops: ${loop.join(", ")})`,
-      wcag: { criterion: "2.1.2", ...A },
-      help: `${understanding}no-keyboard-trap.html`,
-      data: { terminated, loop },
-    });
+    // The audit scoped INTO an open dialog (inventory was modal-scoped) and
+    // focus then cycled inside it: a dialog is supposed to hold focus; the
+    // 2.1.2 question is whether it has a working exit, not whether Tab wraps
+    // inside. Reporting a trap here blames correct dialog behaviour, so the
+    // verdict names the dialog honestly instead.
+    if (terminated === "trap" && modal) {
+      add({
+        check: "keyboard",
+        rule: "keyboard-trap",
+        target: modal,
+        message: `focus stayed inside the open dialog (${modal}); a modal may hold focus, but verify it has a working close action that returns focus`,
+        wcag: { criterion: "2.1.2", ...A },
+        help: `${understanding}no-keyboard-trap.html`,
+        data: { terminated, loop, modal },
+      });
+    } else {
+      add({
+        check: "keyboard",
+        rule: "keyboard-trap",
+        target: loop[0],
+        message:
+          terminated === "trap"
+            ? "Tab no longer moves focus away from this element"
+            : `focus never left the page or returned to the start within ${maxSteps} Tab presses (last stops: ${loop.join(", ")})`,
+        wcag: { criterion: "2.1.2", ...A },
+        help: `${understanding}no-keyboard-trap.html`,
+        data: { terminated, loop },
+      });
+    }
   }
 
   for (const c of candidates) {
@@ -662,11 +972,241 @@ export async function keyboardAudit(page, opts = {}) {
   const reachedRadioGroups = new Set(
     candidates.filter((c) => reachedIndex.has(c.index) && c.radioGroup).map((c) => c.radioGroup),
   );
+  // Honesty gate 1 — overlay/carousel ring or a wrapped-short traversal. If
+  // the traversal died in a small ring (consent banner, carousel nav) or
+  // wrapped through body with most candidates untouched, the page behind the
+  // overlay was never tested and "unreachable" would blame the page for the
+  // overlay. One finding about where Tab got stuck replaces per-element
+  // blame; ring members are still reported individually (a banner with no
+  // exit IS a finding).
+  const ringReached = ring
+    ? new Set(
+        sequence
+          .slice(sequence.length - ring.size)
+          .map((s) => s.index)
+          .filter((i) => i >= 0),
+      )
+    : null;
+  // The ring itself as a fraction of the inventoried candidates decides
+  // whether the cycle is the page's real focus wrap (big) or an overlay loop
+  // (small). When no ring was recorded, a body-wrap that still left over half
+  // untouched is the banner-scope variant (gitlab): Tab entered the banner
+  // ring again right after wrap, so termination saw body once and quit.
+  const untouchedAll = candidates.filter((c) => !reachedIndex.has(c.index));
+  const ringCandidateShare = candidates.length
+    ? ringReached
+      ? ringReached.size / candidates.length
+      : 0
+    : 0;
+  // A cycle that closed without a body wrap (ring too large to record, or the
+  // page cycled mid-document) still never offered focus to the candidates
+  // after the close point — as untested as a budget stop. Any cycle counts as
+  // a short traversal; per-element reporting continues only for a wrapped end
+  // that reached most candidates.
+  const shortTraversal =
+    ring !== null ||
+    terminated === "cycle" ||
+    (terminated === "end" && sequenceSize() <= 8 && untouchedAll.length > candidates.length * 0.5);
+  const traversalStalled =
+    candidates.length > 4 &&
+    (ring
+      ? ringCandidateShare < 0.6
+      : shortTraversal && untouchedAll.length > candidates.length * 0.5);
+  function sequenceSize() { return sequence.length; }
+  if (traversalStalled) {
+    const lastStop = sequence.at(-1)?.path ?? "body";
+    add({
+      check: "keyboard",
+      rule: "keyboard-unreachable",
+      target: ring?.path ?? lastStop,
+      message: ring
+        ? `the Tab loop closed after ${ring.size} stops at ${ring.path} — an overlay or widget keeps focus circulating; elements outside the loop were not reached and are not individually reported`
+        : `the Tab traversal ended early (${sequence.length} stops, ${untouchedAll.length} of ${candidates.length} controls never reached, cycle at ${lastStop}) — an overlay, carousel, or re-render is interfering; elements behind the stop point are not individually reported`,
+      wcag: { criterion: "2.1.1", ...A },
+      help: `${understanding}keyboard.html`,
+      data: {
+        ring: ring?.path,
+        ringSize: ring?.size,
+        stops: sequence.length,
+        candidatesAffected: untouchedAll.length,
+      },
+    });
+  }
+  // Honesty gate 2 — inventory churn. Re-verify missed candidates still
+  // exist before blaming them: a page that re-rendered (hydrated, swapped a
+  // subtree) replaced those nodes, and "unreachable" would blame ghosts.
+  // Runs whenever the traversal passed through churn signals (re-inventory
+  // fired, carousel repeats) or when a substantial share was missed;
+  // squarespace-class misses are few but real ghosts (25/173 = 14% — all
+  // carousel clones replaced mid-flight).
+  /** @type {Set<number>} */
+  const gone = new Set();
+  {
+    const missed = candidates.filter((c) => !reachedIndex.has(c.index));
+    const churnSignal = reInventoried || carouselRepeats > 0;
+    if (churnSignal || missed.length > candidates.length * 0.4) {
+      const states = await page.evaluate(
+        (idx) => idx.map((i) => /** @type {any} */ (window).__rampCheckKeyboard.connected(i)),
+        missed.map((c) => c.index),
+      );
+      missed.forEach((c, i) => { if (!states[i]) gone.add(c.index); });
+      if (gone.size) {
+        add({
+          check: "keyboard",
+          rule: "keyboard-unreachable",
+          target: "html",
+          message: `${gone.size} of the inventoried controls were replaced or removed while the audit ran (content re-rendered); they are not reported as unreachable`,
+          wcag: { criterion: "2.1.1", ...A },
+          help: `${understanding}keyboard.html`,
+          data: { replaced: gone.size, candidates: candidates.length },
+        });
+      }
+    }
+  }
+  // Honesty gate 3 — roving tabindex. An unselected role=tab is
+  // arrow-key-reachable by design once its group's reachable member
+  // (tabindex=0 or the selected one) was itself reached; until then the tabs
+  // (holder included) are genuinely untested and stay reportable.
+  /** @type {Set<number>} */
+  const roving = new Set();
+  const rovingCandidates = candidates.filter(
+    (c) => !reachedIndex.has(c.index) && c.role === "tab" && !gone.has(c.index),
+  );
+  if (rovingCandidates.length && reachedIndex.size) {
+    const groups = await page.evaluate(
+      (idx) => idx.map((i) => /** @type {any} */ (window).__rampCheckKeyboard.rovingGroup(i)),
+      rovingCandidates.map((c) => c.index),
+    );
+    rovingCandidates.forEach((c, i) => {
+      const g = groups[i];
+      // Exempt the sibling only when the holder was reached: an unreached
+      // tablist is untested, not correct-by-pattern.
+      if (g && reachedIndex.has(g.holderIndex)) roving.add(c.index);
+    });
+  }
+  // Honesty gate 4 — state-holder inputs. A tabindex=-1 checkbox/radio whose
+  // state is driven by a keyboard-reachable sibling — the newsletter-card
+  // idiom: visually-hidden checkbox, visible whole-card button that toggles
+  // it (techcrunch-class, live-probed: Enter on the card flips the checkbox).
+  // The FUNCTION is operable via keyboard; the hidden input itself is a
+  // state-holder, not the control. Exempted only when the driving control was
+  // itself reached; anything discovered here is recorded in the finding data
+  // of the note finding — never a silent filter.
+  /** @type {Set<number>} */
+  const stateHolder = new Set();
+  /** @type {Map<number, string>} */
+  const exemptViaByHolder = new Map();
+  /** @type {Map<number, { drivers: { index: number, kind: string }[], labelPair: boolean, labelUnreachable: boolean }>} */
+  const holderDrivers = new Map();
+  const holderCandidates = candidates.filter(
+    (c) =>
+      !reachedIndex.has(c.index) &&
+      c.tabindex !== null &&
+      c.tabindex < 0 &&
+      !gone.has(c.index),
+  );
+  if (holderCandidates.length && reachedIndex.size) {
+    // Phase 1 (in page): list candidate driver controls per holder + label pairing.
+    const discovered = await page.evaluate(
+      (idx) => idx.map((i) => /** @type {any} */ (window).__rampCheckKeyboard.stateHolderDrivers(i)),
+      holderCandidates.map((c) => c.index),
+    );
+    // Phase 2 (Playwright): press keys with the real keyboard on each driver;
+    // a dispatched event is untrusted and site handlers ignore it.
+    holderCandidates.forEach((c, i) => {
+      const d = discovered[i];
+      if (d && d.drivers.length) {
+        holderDrivers.set(c.index, { drivers: d.drivers, labelPair: d.labelPair, labelUnreachable: d.labelPair && d.drivers.every((/** @type {{kind: string}} */ x) => x.kind !== "label") });
+      }
+    });
+    const holdersWithDrivers = holderCandidates.filter((c) => holderDrivers.has(c.index));
+    for (const c of holdersWithDrivers) {
+      const info = /** @type {{ drivers: { index: number, kind: string }[], labelPair: boolean, labelUnreachable: boolean }} */ (holderDrivers.get(c.index));
+      for (const d of info.drivers) {
+        // A reachable <label for> exempts outright once reached.
+        if (d.kind === "label") {
+          if (reachedIndex.has(d.index)) { exemptViaByHolder.set(c.index, "label"); stateHolder.add(c.index); }
+          continue;
+        }
+        if (!reachedIndex.has(d.index)) continue;
+        const before = await page.evaluate((i) => /** @type {any} */ (window).__rampCheckKeyboard.stateOf(i), c.index);
+        await page.evaluate((i) => /** @type {any} */ (window).__rampCheckKeyboard.focus(i), d.index);
+        await page.keyboard.press("Enter");
+        if (!(await page.evaluate((i) => /** @type {any} */ (window).__rampCheckKeyboard.stateOf(i), c.index))) {
+          await page.keyboard.press(" ");
+        }
+        const after = await page.evaluate((i) => /** @type {any} */ (window).__rampCheckKeyboard.stateOf(i), c.index);
+        if (before !== null && after !== before) {
+          exemptViaByHolder.set(c.index, "card-button");
+          stateHolder.add(c.index);
+          // The probe toggled real page state; restore it so the audit
+          // leaves the page as it found it (the stateHolder contract).
+          await page.evaluate(
+            ([i, v]) =>
+              /** @type {any} */ (window).__rampCheckKeyboard.setState(i, v),
+            [c.index, before],
+          );
+          break;
+        }
+      }
+    }
+    if (stateHolder.size) {
+      add({
+        check: "keyboard",
+        rule: "keyboard-unreachable",
+        target: "html",
+        message: `${stateHolder.size} hidden state-holder input(s) are toggled by keyboard-reachable controls (label or card-button) and are not individually reported as unreachable`,
+        wcag: { criterion: "2.1.1", ...A },
+        help: `${understanding}keyboard.html`,
+        data: {
+          stateHolderExempt: stateHolder.size,
+          via: [...exemptViaByHolder.values()],
+        },
+      });
+    }
+  }
+  // Honesty gate 5 — clones of reached content. Infinite-scroll carousels
+  // duplicate card markup; a missed `tabindex=-1` card whose text+href
+  // matches a REACHED tab-reachable card is a clone — the function was
+  // already offered via the original. "Unreachable" for the duplicate is a
+  // false positive (squarespace-class: 26 ti=-1 carousel CTAs, originals
+  // all reached). Summarized in one annotation, never silent.
+  /** @type {Set<number>} */
+  const cloneExempt = new Set();
+  const missedTabMinus = candidates.filter(
+    (c) => !reachedIndex.has(c.index) && c.tabindex !== null && c.tabindex < 0 && !gone.has(c.index) && !stateHolder.has(c.index),
+  );
+  if (missedTabMinus.length && reachedIndex.size) {
+    const matches = await page.evaluate(
+      ([missed, reached]) => missed.map((i) => /** @type {any} */ (window).__rampCheckKeyboard.cloneOfReached(i, reached)),
+      [missedTabMinus.map((c) => c.index), [...reachedIndex]],
+    );
+    missedTabMinus.forEach((c, i) => {
+      if (matches[i] !== null && matches[i] !== undefined) cloneExempt.add(c.index);
+    });
+    if (cloneExempt.size) {
+      add({
+        check: "keyboard",
+        rule: "keyboard-unreachable",
+        target: "html",
+        message: `${cloneExempt.size} controls are duplicates (infinite-scroll carousel clones) of tab-reachable content and are not individually reported as unreachable`,
+        wcag: { criterion: "2.1.1", ...A },
+        help: `${understanding}keyboard.html`,
+        data: { cloneExempt: cloneExempt.size },
+      });
+    }
+  }
   for (const c of candidates) {
     if (reachedIndex.has(c.index)) continue;
     if (c.composite && reachedComposites.has(c.composite)) continue;
     if (c.radioGroup && reachedRadioGroups.has(c.radioGroup)) continue;
+    if (gone.has(c.index)) continue;
+    if (roving.has(c.index)) continue;
+    if (stateHolder.has(c.index)) continue;
+    if (cloneExempt.has(c.index)) continue;
+    if (traversalStalled && !(ringReached && ringReached.has(c.index))) continue; // the stalled-traversal finding covers the page-behind-overlay
     if (terminated === "trap" || terminated === "budget") continue; // everything after a trap is unreachable for the same reason
+    if (shortTraversal && terminated === "cycle") continue; // candidates past a mid-document cycle close were never offered focus; one finding above tells the story
     const why =
       c.reason === "onclick"
         ? "has an onclick handler but is not focusable; add tabindex=\"0\" and a role, or use a <button>"
@@ -811,23 +1351,14 @@ export async function keyboardAudit(page, opts = {}) {
       });
     }
   } else {
-    const before = candidates.filter((c) => c.beforeMain && reachedIndex.has(c.index)).length;
-    const threshold = opts.skipLinkThreshold ?? 3;
-    if (hasMain && before >= threshold && !modal) {
-      add({
-        check: "keyboard",
-        rule: "skip-link-missing",
-        target: sequence[0]?.path ?? "body",
-        message: `${before} focusable elements precede the main landmark and the first Tab stop is not a skip link`,
-        wcag: { criterion: "2.4.1", level: "best-practice", version: "2.0" },
-        help: `${understanding}bypass-blocks.html`,
-        data: { focusableBeforeMain: before },
-      });
-    }
+    // No skip link as the first Tab stop: not reported. axe's `bypass` rule
+    // covers the no-bypass case, and a first-stop heuristic reads
+    // fresh-profile consent banners as missing skip links. Multi-site sweep
+    // FP, Oct 2026; see docs/keyboard-limitations.md.
   }
 
   await page.evaluate((state) => /** @type {any} */ (window).__rampCheckKeyboard.restore(state), saved);
-  return { findings, candidates, sequence, terminated, modal, skipLink };
+  return { findings, candidates, sequence, terminated, modal, skipLink, ring };
 }
 
 /**

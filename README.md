@@ -220,8 +220,8 @@ Details and the ADA references: [docs/conformance-level.md](docs/conformance-lev
 | keyboard: `focus-indicator-thin` | 2.4.13 | AAA | the only indicator is an outline under 2 px (heuristic) |
 | keyboard: `focus-obscured`, `focus-partially-obscured` | 2.4.11, 2.4.12 | AA, AAA | the focused element is behind a sticky header, banner or overlay |
 | keyboard: `focus-changes-context` | 3.2.1 | A | receiving focus navigates the page |
-| keyboard: `skip-link-broken`, `skip-link-missing` | 2.4.1 | A, best practice | a skip link that goes nowhere, or a long nav with no way past it |
-| textSpacing: `text-spacing-clipped` | 1.4.12 | AA | text clipped once line height, letter, word and paragraph spacing are raised to the WCAG values (warns by default) |
+| keyboard: `skip-link-broken` | 2.4.1 | A | a skip link whose activation goes nowhere (no "missing skip link" rule: axe's `bypass` covers it, and first-stop heuristics misread consent banners) |
+| textSpacing: `text-spacing-clipped` | 1.4.12 | AA | text that a confirmed glyph-range crossing (or a new ellipsis) shows is cut once line height, letter, word and paragraph spacing are raised to the WCAG values; box surplus from decoration or padding, and by-design-hidden text, do not count (warns by default) |
 | consistency: `duplicate-page-title`, `inconsistent-navigation` | 2.4.2, 3.2.3 | A, AA | runner only: titles shared across pages, primary navigation that differs between pages |
 
 Every check has a seeded defect page under [fixtures/](fixtures/) and a spec

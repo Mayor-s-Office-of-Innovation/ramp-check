@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: stretched-link card overlays</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    .wrap { max-width: 60ch; margin: 0 auto; padding: 2rem 1rem; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    /* The nuxt.com card pattern: a transparent stretched link paints over the
+       card AFTER the visible CTA, winning the hit-test without rendering. */
+    .card { position: relative; border: 1px solid #ccc; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    .card h2 { margin-top: 0; }
+    .card .stretched::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+    .card .cta { display: inline-block; margin-top: .5rem; color: #0b4f8a; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Stretched-link cards</h1>
+
+    <div class="card">
+      <h2>Transparent overlay card</h2>
+      <p>The whole card is clickable via an invisible stretched overlay that
+         wins the hit-test but paints nothing. The CTA's focus ring stays
+         fully visible — this must stay quiet.</p>
+      <a class="cta" href="#cta-1">Read the docs</a>
+      <a class="stretched" href="#card-1" aria-label="Read the docs"><span class="absolute"></span></a>
+    </div>
+
+    <div class="card" id="card-1">
+      <h2>Opaque overlay card</h2>
+      <p>The stretched overlay here PAINTS (a translucent sheet). When the CTA
+         below is focused, its indicator is genuinely hidden — this must be
+         reported.</p>
+      <a class="cta" href="#cta-2">View the source</a>
+      <a class="stretched painted" href="#card-2" aria-label="View the source"></a>
+    </div>
+    <style>.painted { position: absolute; inset: 0; background: rgba(255,255,255,0.92); }</style>
+
+    <div class="card" id="card-2">
+      <h2>Next card</h2>
+      <p>Plain content, no overlay. Control.</p>
+      <a class="cta" href="#cta-3">Another link</a>
+    </div>
+  </div>
+</body>
+</html>

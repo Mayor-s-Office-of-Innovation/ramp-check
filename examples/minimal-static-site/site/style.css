@@ -6,3 +6,4 @@ button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; b
 .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
 .skip:focus { left: 1rem; }
 .muted { color: #767676; }
+.dim { color: #8a8a8a; }

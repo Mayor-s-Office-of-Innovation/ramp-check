@@ -14,6 +14,20 @@
     .truncated { width: 12ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid #1a1a1a; }
     /* Not a defect: the box grows with its content. */
     .fluid { border: 1px solid #1a1a1a; overflow: hidden; }
+    /* Seeded defect (nextjs "Deploy" chip class): the nav chip (a fixed-width
+       anchor) wraps a truncating span; letter-spacing 0.12em pushes the
+       span's scrollWidth past its clientWidth and the ellipsis fires —
+       user-visible truncation ("Depl…", user-verified). */
+    .chip-link { display: block; max-width: 52px; border: 1px solid #1a1a1a; padding: 0 6px; }
+    .chip-span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Not a defect (nextjs hero class): a fixed-height wrapper whose ONLY
+       overflow is aria-hidden decoration; no text node crosses the boundary. */
+    .deco-hero { height: 6em; overflow: hidden; position: relative; border: 1px solid #1a1a1a; padding-bottom: 4rem; }
+    .deco-line { position: absolute; bottom: 0; width: 1px; height: 8rem; background: linear-gradient(#0b4f8a, transparent); }
+    /* Not a defect: sr-only strings inside clipped boxes are read aloud by
+       screen readers and invisible at rest; clipping them is not visual. */
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .sr-holder { overflow: hidden; height: 2em; }
   </style>
 </head>
 <body>
@@ -22,6 +36,15 @@
     <div class="card" id="card">Two short lines of text that fit at the default line height.<br>Second line.</div>
     <p class="truncated" id="truncated">This sentence was already truncated with an ellipsis before any change.</p>
     <div class="fluid" id="fluid">This box has overflow hidden but no fixed height, so it grows.</div>
+
+    <h2>Sweep cases</h2>
+    <div class="chip" id="chip"><a href="#deploy" class="chip-link"><span class="chip-span" id="chip-span">Deploy</span></a></div>
+    <div class="deco-hero" id="deco-hero">
+      <p>Hero copy that fits and must not be reported.</p>
+      <div class="deco-line" aria-hidden="true" id="deco-line-1"></div>
+      <div class="deco-line" aria-hidden="true" id="deco-line-2"></div>
+    </div>
+    <div class="sr-holder" id="sr-holder"><span class="sr-only" id="sr-only">Hidden label for screen readers only.</span><p>Visible text that fits.</p></div>
   </main>
 </body>
 </html>

@@ -128,13 +128,34 @@ intends it. The allowlist, with a reason and an expiry, is the answer.
   the control registers as `focus-partially-obscured`. 2.4.11 exempts content
   the user opened.
 - **Translucent layers** and **decorative pseudo-elements** that extend over
-  a control hit-test as obscuring it.
+  a control hit-test as obscuring it. Fully transparent hit-test layers do
+  not (the painted check, docs/keyboard.md), but a layer with 1% opacity
+  still counts.
 - **`aria-disabled="true"` controls** are candidates, because ARIA says they
   remain focusable. A design that removes them from the tab order gets an
   unreachable finding.
 - **Virtualised lists.** A list that renders more rows as focus advances can
   exhaust the Tab budget and is reported as `keyboard-trap` with reason
   "budget". Raise `keyboard: { maxSteps }` for such pages.
+- **Trapped inside a consent dialog.** When the audit is scoped to an open
+  dialog and Tab cycles inside it, the trap finding names the dialog and asks
+  for a working exit rather than blaming the last controls. A CMP wall that
+  never dismisses still needs a human decision; the finding's data carries
+  the modal path.
+
+## 7a. Reachability honesty gates
+
+`keyboard-unreachable` claims the traversal offered an element focus. Three
+conditions invalidate that claim, and each collapses the per-element report
+into one annotated finding (see docs/keyboard.md): a small Tab ring closed by
+an overlay or carousel, a cycle or wrap that ended the traversal with most
+candidates untouched, and candidates whose nodes were replaced mid-audit by a
+re-render. The sweep that found these (crash-consistent across gitlab.com,
+walgreens.com, pinterest.com, debian.org) also showed the gates cannot
+distinguish "banner swallows Tab" from "banner dismissed on second visit" —
+if a page reports an overlay ring on every run, that is the honest state of
+a fresh profile; dismissing the banner first (a spec clicking accept before
+`a11y.check()`) is the fixture-side answer.
 
 A team's first run on a rich application will have some of this noise. Work
 through it once; the allowlist then documents each decision.
@@ -177,8 +198,10 @@ prefix pattern ending in `*`.
   exclude visually-hidden skip links, so this stays as is.
 - **Skip link recognition.** Only the first Tab stop is considered. A first
   link to `#top` or `#search` is not treated as a skip link unless its text
-  says "skip" or "jump". `skip-link-missing` fires at three or more focusable
-  elements before `main`; tune with `keyboard: { skipLinkThreshold }`.
+  says "skip" or "jump". There is no "skip link missing" rule (retired after
+  the multi-site sweep, Oct 2026): axe's `bypass` rule covers the criterion,
+  and a first-stop heuristic misreads fresh profiles where consent banners
+  occupy the early Tab stops — gov.uk was the disproof that settled it.
 - **Focus moved by script.** Autofocus on reveal, a late widget stealing
   focus, or a `focusin` handler that moves focus can shorten or reorder the
   recorded sequence. The audit reports what happened, not why.
