@@ -18,8 +18,12 @@
        anchor) wraps a truncating span; letter-spacing 0.12em pushes the
        span's scrollWidth past its clientWidth and the ellipsis fires —
        user-visible truncation ("Depl…", user-verified). */
-    .chip-link { display: block; max-width: 52px; border: 1px solid #1a1a1a; padding: 0 6px; }
-    .chip-span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Seeded defect (nextjs "Deploy" chip class): a fixed-width chip whose
+       monospace text fits before the change and overflows after letter
+       spacing is raised — sized with a wide margin so font-metric variance
+       across platforms (CI Linux vs dev macOS) cannot flip the verdict. */
+    .chip-link { display: block; max-width: 180px; border: 1px solid #1a1a1a; padding: 0 6px; }
+    .chip-span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; font-size: 16px; }
     /* Not a defect (nextjs hero class): a fixed-height wrapper whose ONLY
        overflow is aria-hidden decoration; no text node crosses the boundary. */
     .deco-hero { height: 6em; overflow: hidden; position: relative; border: 1px solid #1a1a1a; padding-bottom: 4rem; }
@@ -38,7 +42,7 @@
     <div class="fluid" id="fluid">This box has overflow hidden but no fixed height, so it grows.</div>
 
     <h2>Sweep cases</h2>
-    <div class="chip" id="chip"><a href="#deploy" class="chip-link"><span class="chip-span" id="chip-span">Deploy</span></a></div>
+    <div class="chip" id="chip"><a href="#deploy" class="chip-link"><span class="chip-span" id="chip-span">deploydeploydeploy</span></a></div>
     <div class="deco-hero" id="deco-hero">
       <p>Hero copy that fits and must not be reported.</p>
       <div class="deco-line" aria-hidden="true" id="deco-line-1"></div>
