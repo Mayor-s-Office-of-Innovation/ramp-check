@@ -222,6 +222,7 @@ Details and the ADA references: [docs/conformance-level.md](docs/conformance-lev
 | keyboard: `focus-changes-context` | 3.2.1 | A | receiving focus navigates the page |
 | keyboard: `skip-link-broken`, `skip-link-missing` | 2.4.1 | A, best practice | a skip link that goes nowhere, or a long nav with no way past it |
 | textSpacing: `text-spacing-clipped` | 1.4.12 | AA | text clipped once line height, letter, word and paragraph spacing are raised to the WCAG values (warns by default) |
+| textResize: `text-resize-locked` | 1.4.4 | AA | text whose computed font size does not change when the default font size doubles — the font-size preference is ignored for it (px/pt-locked); full-page zoom still magnifies |
 | consistency: `duplicate-page-title`, `inconsistent-navigation` | 2.4.2, 3.2.3 | A, AA | runner only: titles shared across pages, primary navigation that differs between pages |
 
 Every check has a seeded defect page under [fixtures/](fixtures/) and a spec

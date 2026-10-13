@@ -6,7 +6,7 @@ a11yMatrix({ colorScheme: ["light", "dark"], reducedMotion: ["reduce"] }, (cell)
   test(`clean page passes a11y.check (${cell.name})`, async ({ page, a11y }) => {
     await page.goto("/clean.html");
     const result = await a11y.check("clean");
-    expect(result.ran).toEqual(["motion", "axe", "reflow", "textSpacing", "keyboard"]);
+    expect(result.ran).toEqual(["motion", "axe", "reflow", "textSpacing", "textResize", "keyboard"]);
     expect(result.policy).toBe("wcag-aaa");
   });
 });
@@ -31,7 +31,7 @@ test.describe("a11y.check under reduced motion", () => {
   test("per-call overrides turn a check off", async ({ page, a11y }) => {
     await page.goto("/motion-unguarded.html");
     const result = await a11y.scan("no motion", { checks: { motion: "off" } });
-    expect(result.ran).toEqual(["axe", "reflow", "textSpacing", "keyboard"]);
+    expect(result.ran).toEqual(["axe", "reflow", "textSpacing", "textResize", "keyboard"]);
     expect(result.blocking).toEqual([]);
   });
 });
@@ -43,7 +43,7 @@ test.describe("a11yConfig option", () => {
     await page.goto("/axe-contrast.html");
     const result = await a11y.scan("contrast at AA");
     expect(result.policy).toBe("wcag22-aa");
-    expect(result.ran).toEqual(["axe", "textSpacing"]);
+    expect(result.ran).toEqual(["axe", "textSpacing", "textResize"]);
     expect(result.warnings.map((f) => `${f.rule} ${f.target}`)).toContain("color-contrast-enhanced #aa-only");
   });
 });
