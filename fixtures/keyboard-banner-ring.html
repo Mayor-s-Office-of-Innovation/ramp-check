@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: banner traps Tab before the page</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .banner { position: fixed; top: 0; left: 0; right: 0; background: #0b4f8a; color: #fff; padding: .75rem 1rem; z-index: 100; display: flex; gap: .5rem; }
+    .banner button { font: inherit; }
+    banner { display: none; }
+  </style>
+</head>
+<body>
+  <div class="banner" role="region" aria-label="Cookie notice">
+    <span>We use cookies.</span>
+    <button type="button" id="accept">Accept</button>
+    <button type="button" id="reject">Reject</button>
+    <a href="/clean.html">Policy</a>
+  </div>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Docs</a> <a href="/axe-contrast.html">Shop</a> <a href="/reflow-overflow.html">Blog</a> <a href="/motion-guarded.html">About</a></nav>
+  </header>
+  <main id="main">
+    <h1>Interactive page behind the banner</h1>
+    <p>The banner's three focusables form a closed Tab ring (its keydown handler
+       swallows Tab on the policy link and refocuses the accept button). Every
+       nav link and the button below exist and are visible — the audit must end
+       the traversal with one ring finding, not blame each of them.</p>
+    <p><button type="button" id="btn">A button</button></p>
+  </main>
+  <script>
+    // The ring: after the last banner control, Tab wraps back into the banner
+    // before reaching the page — the fresh-profile site pattern (CMP walls).
+    document.querySelector(".banner").addEventListener("keydown", (e) => {
+      if (e.key === "Tab" && !e.shiftKey) {
+        const focusables = ["accept", "reject"];
+        if (e.target.id === "reject" || e.target.tagName === "A") {
+          e.preventDefault();
+          document.getElementById("accept").focus();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

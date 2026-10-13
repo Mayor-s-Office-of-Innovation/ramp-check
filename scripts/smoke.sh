@@ -24,6 +24,6 @@ cat "$work/out.txt"
 echo "exit code: $code"
 [ "$code" -eq 1 ] || { echo "expected exit 1 (seeded findings)"; exit 1; }
 grep -q "color-contrast-enhanced" "$work/out.txt" || { echo "expected the enhanced-contrast finding"; exit 1; }
-grep -q "skip-link-missing" "$work/out.txt" || { echo "expected the skip-link finding"; exit 1; }
+grep -q "color-contrast" "$work/out.txt" || { echo "expected the AA-contrast finding"; exit 1; }
 [ -f "$work/report/ramp-check.md" ] || { echo "expected the Markdown report"; exit 1; }
 echo "smoke test passed: the packed tarball works as a dependency."

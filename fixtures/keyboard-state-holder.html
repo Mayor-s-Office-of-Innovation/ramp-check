@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: hidden state-holder checkbox</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    .wrap { max-width: 60ch; margin: 0 auto; padding: 2rem 1rem; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .newsletter-card button {
+      display: block; width: 100%; text-align: left; font: inherit; padding: .75rem;
+      border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer;
+    }
+    .newsletter-card button[aria-pressed="true"] { border-color: #0b4f8a; background: #e8f1fa; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    label.visually-hidden { display: block; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Hidden state-holder inputs</h1>
+
+    <form class="newsletter-card">
+      <h2>Card-button idiom (techcrunch-class)</h2>
+      <p>The checkbox is visually hidden with tabindex=-1; the visible card
+         button toggles it (keyboard Enter works). The input must NOT be
+         reported unreachable — it is a state-holder.</p>
+      <input type="checkbox" id="news-daily" class="visually-hidden" tabindex="-1">
+      <label for="news-daily" class="visually-hidden">Add Daily News</label>
+      <button type="button" aria-pressed="false" id="card-daily">TechCrunch Daily News</button>
+      <p><button type="submit">Subscribe</button></p>
+    </form>
+
+    <form>
+      <h2>Actually unreachable control</h2>
+      <p>A hidden checkbox whose only pair is an unreachable hidden label and
+         no working driver: this one IS a 2.1.1 finding.</p>
+      <input type="checkbox" id="mystery-opt" class="visually-hidden" tabindex="-1">
+      <label for="mystery-opt" class="visually-hidden">Opt in to mystery</label>
+    </form>
+  </div>
+  <script>
+    // The card-button idiom: activation toggles the state-holder checkbox.
+    for (const [card, box] of [["card-daily", "news-daily"]]) {
+      const btn = document.getElementById(card);
+      const input = document.getElementById(/** @type {string} */ (box));
+      btn.addEventListener("keydown", (e) => {
+        // Keyboard-shaped handler: fires on real Enter/Space (untrusted
+        // dispatched events do not trigger it — the audit probes with the
+        // real keyboard for exactly this reason).
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          input.checked = !input.checked;
+          btn.setAttribute("aria-pressed", String(input.checked));
+        }
+      });
+      btn.addEventListener("click", () => {
+        input.checked = !input.checked;
+        btn.setAttribute("aria-pressed", String(input.checked));
+      });
+    }
+  </script>
+</body>
+</html>

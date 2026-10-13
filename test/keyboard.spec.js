@@ -125,14 +125,93 @@ test.describe("keyboard audit", () => {
     expect(result.skipLink.works).toBe(false);
   });
 
-  test("no skip link ahead of a long nav is a best-practice finding", async ({ page }) => {
-    await page.goto("/keyboard-no-skip-link.html");
-    const result = await keyboardAudit(page);
-    expect(keys(result.findings)).toEqual(["skip-link-missing a:nth-of-type(1)"]);
-    expect(result.findings[0].wcag.level).toBe("best-practice");
-    // One nav link, as on clean.html, is below the threshold.
+  test("no skip link ahead of a long nav is not reported; axe's bypass covers it", async ({ page }) => {
+    await page.goto("/keyboard-clean.html");
+    // clean.html itself has five nav links after its skip link — here the
+    // audit must stay quiet regardless, since the missing-skip-link rule
+    // was retired (multi-site sweep FP: consent banners occupy early Tab
+    // stops and read as a missing skip link on fresh profiles).
+    expect((await keyboardAudit(page)).findings).toEqual([]);
     await page.goto("/clean.html");
     expect((await keyboardAudit(page)).findings).toEqual([]);
+  });
+
+  test("a banner that swallows Tab into a closed ring yields one ring finding", async ({ page }) => {
+    await page.goto("/keyboard-banner-ring.html");
+    const result = await keyboardAudit(page, { screenshotFallback: false });
+    // The banner's ring cut the traversal off after 2 stops; the page behind
+    // it (5 nav links + button) was never offered focus.
+    const ku = result.findings.filter((f) => f.rule === "keyboard-unreachable");
+    expect(ku).toHaveLength(1);
+    expect(ku[0].target).toBe("button#accept");
+    expect(ku[0].message).toMatch(/Tab loop closed after 2 stops/);
+    expect(ku[0].wcag).toEqual({ criterion: "2.1.1", level: "A", version: "2.0" });
+    expect(result.ring).toEqual({ path: "button#accept", size: 2 });
+    // No per-element blame for the never-reached page content.
+    expect(ku[0].target).not.toMatch(/a:nth|button#btn/);
+    expect(result.findings.filter((f) => f.target.includes("btn"))).toEqual([]);
+  });
+
+  test("roving-tabindex tabs: unselected siblings are exempt once the holder is reached", async ({ page }) => {
+    await page.goto("/keyboard-roving-tabs.html");
+    const result = await keyboardAudit(page, { screenshotFallback: false });
+    // Correct tabs pattern: the selected tab is the only Tab stop; arrow keys
+    // move between tabs (MDN's about page and Angular docs tablists).
+    expect(result.findings.filter((f) => f.rule === "keyboard-unreachable")).toEqual([]);
+    expect(result.sequence.map((s) => s.path)).toEqual(["a", "button#t1"]);
+  });
+
+  test("roving-tabindex tabs with no reachable holder stay reportable", async ({ page }) => {
+    await page.setContent(
+      `<main><button role="tab" aria-selected="false" tabindex="-1" id="t1">A</button>` +
+      `<button role="tab" aria-selected="false" tabindex="-1" id="t2">B</button></main>`,
+    );
+    const result = await keyboardAudit(page, { screenshotFallback: false });
+    // No tabindex=0/selected holder exists: a keyboard user has no way in at
+    // all — this IS a 2.1.1 defect, not a pattern.
+    expect(result.findings.map((f) => f.target).sort()).toEqual(["button#t1", "button#t2"]);
+  });
+
+  test("candidates replaced by a re-render mid-audit are not blamed", async ({ page }) => {
+    await page.goto("/keyboard-rerender.html");
+    // Ghost links are in the inventory; a timeout swaps the subtree while the
+    // audit settles/traverses, so the originals are gone before Tab arrives.
+    const result = await keyboardAudit(page, { screenshotFallback: false });
+    const ku = result.findings.filter((f) => f.rule === "keyboard-unreachable");
+    // The replaced candidates are dropped (connected() = false), summarized by
+    // one annotation finding — not nine ghost-blame findings.
+    expect(ku.every((f) => f.message.includes("replaced or removed") || f.message.includes("Tab loop") || f.message.includes("ended early"))).toBe(true);
+    expect(ku.filter((f) => f.message.includes("replaced or removed")).length).toBeLessThanOrEqual(1);
+    expect(ku.filter((f) => f.target.includes("ghost"))).toEqual([]);
+  });
+
+  test("a transparent stretched-link overlay does not read as obscured", async ({ page }) => {
+    await page.goto("/keyboard-overlay-transparent.html");
+    const result = await keyboardAudit(page, { screenshotFallback: false });
+    // nuxt.com-class card: the whole-card stretched link wins elementFromPoint
+    // but paints nothing, so the CTA's focus ring stays visible. Only the
+    // PAINTED overlay card (2.4.11 for real) may fire — and its selector
+    // collides with the transparent card's CTA, so assert via the rect.
+    const fired = result.findings.filter((f) => f.rule === "focus-obscured");
+    expect(fired).toHaveLength(1);
+    expect(fired[0].data.rect.y).toBeGreaterThan(300); // the opaque card
+    const steps = result.sequence.filter((s) => s.path.includes("cta"));
+    expect(steps.filter((s) => s.path === "a.cta:nth-of-type(1)" && s.index === 0).every((s) => s.obscured === "none")).toBe(true);
+  });
+
+  test("a hidden checkbox toggled by a reachable card button is a state-holder, not unreachable", async ({ page }) => {
+    await page.goto("/keyboard-state-holder.html");
+    const result = await keyboardAudit(page, { screenshotFallback: false });
+    const ku = result.findings.filter((f) => f.rule === "keyboard-unreachable");
+    // The techcrunch-class input is exempt (Enter on the visible card button
+    // flips it — probed with the real keyboard); the annotation finding
+    // records the exemption instead of per-element blame. The orphan hidden
+    // checkbox (no working driver) stays a finding.
+    expect(ku.map((f) => f.target)).toEqual(["html", "input#mystery-opt"]);
+    expect(ku[0].data.stateHolderExempt).toBe(1);
+    expect(ku[0].data.via).toEqual(["card-button"]);
+    // The audit restored the toggled state.
+    expect(await page.evaluate(() => document.getElementById("news-daily").checked)).toBe(false);
   });
 
   test("the policy decides: under 2.1 AA, obscured focus and thin outlines warn", async ({ page }) => {

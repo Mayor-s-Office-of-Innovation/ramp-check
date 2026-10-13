@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: SPA re-render swaps inventoried nodes</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a></nav>
+  </header>
+  <main id="main">
+    <h1>Re-render after the audit starts</h1>
+    <p>A widget hydrates shortly after load: the ten ghost links are replaced
+       by ten different nodes with the same generic path, and a fresh button
+       appears. Replaced candidates must not be reported as unreachable.</p>
+    <div id="feed">
+      <a href="/ghost-1.html">Ghost 1</a> <a href="/ghost-2.html">Ghost 2</a>
+      <a href="/ghost-3.html">Ghost 3</a> <a href="/ghost-4.html">Ghost 4</a>
+      <a href="/ghost-5.html">Ghost 5</a> <a href="/ghost-6.html">Ghost 6</a>
+      <a href="/ghost-7.html">Ghost 7</a> <a href="/ghost-8.html">Ghost 8</a>
+      <a href="/ghost-9.html">Ghost 9</a> <a href="/ghost-10.html">Ghost 10</a>
+    </div>
+    <p><button type="button" id="btn">A button</button></p>
+    <p><a href="/clean.html" id="stable">A stable link</a></p>
+  </main>
+  <script>
+    // Swap the ghosts ~2.5s after load: after the audit's inventory ran but
+    // before/while the traversal is underway — the pinterest mechanism.
+    setTimeout(() => {
+      const feed = document.getElementById("feed");
+      const fresh = document.createElement("div");
+      fresh.id = "feed-inner";
+      fresh.innerHTML =
+        '<a href="/real-1.html">Fresh 1</a> <a href="/real-2.html">Fresh 2</a> ' +
+        '<a href="/real-3.html">Fresh 3</a> <a href="/real-4.html">Fresh 4</a> ' +
+        '<a href="/real-5.html">Fresh 5</a> <a href="/real-6.html">Fresh 6</a> ' +
+        '<a href="/real-7.html">Fresh 7</a> <a href="/real-8.html">Fresh 8</a> ' +
+        '<a href="/real-9.html">Fresh 9</a> <a href="/real-10.html">Fresh 10</a>';
+      feed.replaceChildren(fresh);
+    }, 2500);
+  </script>
+</body>
+</html>
