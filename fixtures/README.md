@@ -22,6 +22,7 @@ it still catches it. A check without a page here is not done.
 | `keyboard-iframe.html` | keyboard | An iframe with three buttons. Not a defect: Tab moving through it must not read as a trap. |
 | `keyboard-focus-navigates.html` | keyboard | A select that navigates when it receives focus. |
 | `text-spacing-clipped.html` | textSpacing | A fixed-height card that clips at line-height 1.5; a pre-truncated box and a fluid box that must not be reported. |
+| `resize-text-locked.html` | textResize | A px-locked card (fires: preference ignored), a rem-sized card that grows (quiet), and a nested-inherited case blamed once (quiet child). |
 | `patterns-dialog.html` | patterns | A native modal done right, and a class-toggled div that moves no focus, leaks Tab, ignores Escape and returns nothing. |
 | `patterns-live.html` | patterns | A status region that announces, a plain div that does not, and an alert created with its content. |
 | `patterns-form.html` | patterns | Errors identified with text and focus; a red border alone; native browser validation. |

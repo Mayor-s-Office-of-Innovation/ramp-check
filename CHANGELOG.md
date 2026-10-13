@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- New `textResize` check (`text-resize-locked`, 1.4.4 AA, blocks by default):
+  emulates a user doubling their browser's default font size (html font-size
+  200%) and reports every text element whose computed font size does not
+  change — px/pt-locked text ignores the font-size preference (full-page
+  zoom still magnifies). One finding per outermost px owner; inherited
+  descendants are not re-reported. The user-raised-font-size path is the
+  scaling method low-vision users who do not zoom rely on. Fixture:
+  fixtures/resize-text-locked.html.
+
 - The contents of a closed `<details>` are no longer reported as
   `keyboard-unreachable`. Chromium keeps a layout box for them under
   `content-visibility`, so the rendered-box test passed; visibility now also
