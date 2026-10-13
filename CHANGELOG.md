@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- New `textResize` check (`text-resize-locked`, 1.4.4 AA, blocks by default):
+  emulates a user doubling their browser's default font size (html font-size
+  200%) and reports every text element whose computed font size does not
+  change — px/pt-locked text ignores the font-size preference (full-page
+  zoom still magnifies). One finding per outermost px owner; inherited
+  descendants are not re-reported. The user-raised-font-size path is the
+  scaling method low-vision users who do not zoom rely on. Fixture:
+  fixtures/resize-text-locked.html.
 - `text-spacing-clipped` is confirmed by a text-extent walk before it is
   reported. A box scroll surplus alone was too noisy (the multi-site sweep +
   manual review proved it): nextjs.org's hero surplus is aria-hidden 1px
@@ -39,14 +47,6 @@
   the stack paints at a sample point, the point is not covered. Fixture:
   fixtures/keyboard-overlay-transparent.html (transparent card quiet, opaque
   card fires).
-- `keyboard-unreachable` no longer floods reports when the traversal itself
-  was cut short. Three honesty gates, each disproven on real sites during
-  the multi-site sweep (Oct 2026): (1) a Tab ring closed inside a consent
-  banner, carousel or small widget no longer blames every element behind
-  it — one finding names where the loop closed (GitLab: 79 findings → 1;
-  the whole page was hidden behind its OneTrust banner ring); (2) candidates
-  whose nodes were replaced or removed by a re-render mid-audit (SPA churn)
-  are dropped with one annotation — "unreachable" would blame ghosts
 - `keyboard-unreachable` no longer floods reports when the traversal itself
   was cut short. Honesty gates, each disproven on real sites during the
   multi-site sweep (Oct 2026): (1) a Tab ring closed inside a consent

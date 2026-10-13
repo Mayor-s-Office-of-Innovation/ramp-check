@@ -9,6 +9,7 @@ import { motionAudit } from "./checks/motion.js";
 import { reflowCheck } from "./checks/reflow.js";
 import { keyboardAudit } from "./checks/keyboard.js";
 import { textSpacing } from "./checks/text-spacing.js";
+import { textResize } from "./checks/resize-text.js";
 import { applyAllowlist, loadAllowlist } from "./checks/allowlist.js";
 import { resolvePolicy, severityFor } from "./policy.js";
 
@@ -24,8 +25,8 @@ import { resolvePolicy, severityFor } from "./policy.js";
  * @property {PolicyName} [policy]   "wcag-aaa" (default) | "wcag22-aa" | "wcag21-aa"
  * @property {Mode} [bestPractice]   axe's non-WCAG rules: "block" (default) | "warn" | "off"
  * @property {Partial<Record<CheckName, Mode | "auto">>} [checks]
- *   per-check override. "auto" (default) lets the policy decide; "block" or
- *   "warn" forces it; "off" skips the check. `textSpacing` defaults to "warn".
+   * per-check override. "auto" (default) lets the policy decide; "block" or
+   * "warn" forces it; "off" skips the check. `textSpacing` defaults to "warn";
  * @property {import("./checks/motion.js").MotionAuditOptions} [motion]
  * @property {import("./checks/reflow.js").ReflowOptions} [reflow]
  * @property {import("./checks/keyboard.js").KeyboardAuditOptions} [keyboard]
@@ -105,6 +106,11 @@ export async function runChecks(page, config = {}, ctx = {}) {
     spacing = await textSpacing(page);
     findings.push(...spacing.findings);
     ran.push("textSpacing");
+  }
+  if (mode("textResize") !== "off") {
+    const resize = await textResize(page);
+    findings.push(...resize.findings);
+    ran.push("textResize");
   }
   // Keyboard last: it moves focus (restored afterwards) and is the slowest.
   if (mode("keyboard") !== "off") {

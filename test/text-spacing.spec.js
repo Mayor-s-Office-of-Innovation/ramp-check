@@ -34,7 +34,7 @@ test.describe("text spacing", () => {
   test("warns by default and blocks when promoted", async ({ page }) => {
     await page.goto("/text-spacing-clipped.html");
     const def = await runChecks(page, { checks: { keyboard: "off", reflow: "off", axe: "off" } });
-    expect(def.ran).toEqual(["textSpacing"]);
+    expect(def.ran).toEqual(["textSpacing", "textResize"]);
     expect(def.warnings.map((f) => f.rule)).toEqual(["text-spacing-clipped", "text-spacing-clipped"]);
     expect(def.blocking).toEqual([]);
     const strict = await runChecks(page, { checks: { keyboard: "off", reflow: "off", axe: "off", textSpacing: "block" } });

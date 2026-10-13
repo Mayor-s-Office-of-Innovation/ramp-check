@@ -8,6 +8,7 @@ export { motionAudit, motionRuntime } from "./checks/motion.js";
 export { reflowCheck } from "./checks/reflow.js";
 export { keyboardAudit } from "./checks/keyboard.js";
 export { textSpacing, TEXT_SPACING_CSS } from "./checks/text-spacing.js";
+export { textResize, TEXT_RESIZE_CSS } from "./checks/resize-text.js";
 export { siteConsistency, PRIMARY_NAV_SELECTOR } from "./checks/consistency.js";
 export {
   loadBaseline,

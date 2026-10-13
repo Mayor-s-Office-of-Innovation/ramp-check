@@ -227,7 +227,7 @@ function keyboardRuntime({ props }) {
     if (bg && !/rgba\(\s*,\s*,\s*,\s*0\)|^transparent$/i.test(bg) && !/ 0\)$/.test(bg)) return true;
     if (cs.backgroundImage !== "none") return true;
     for (const side of ["Top", "Right", "Bottom", "Left"]) {
-      if (Number.parseFloat(cs[`border-${side.toLowerCase()}-width`]) > 0 && !/^0|none$/.test(cs[`border-${side.toLowerCase()}-style`] ?? "none")) return true;
+      if (Number.parseFloat(cs.getPropertyValue(`border-${side.toLowerCase()}-width`)) > 0 && !/^0|none$/.test(cs.getPropertyValue(`border-${side.toLowerCase()}-style`) ?? "none")) return true;
     }
     if (cs.boxShadow !== "none" && cs.boxShadow !== "") return true;
     if (cs.outlineStyle !== "none" && (Number.parseFloat(cs.outlineWidth) || 0) > 0) return true;
@@ -244,7 +244,7 @@ function keyboardRuntime({ props }) {
       if (pbg && !/rgba\(\s*,\s*,\s*,\s*0\)|^transparent$/i.test(pbg) && !/ 0\)$/.test(pbg)) return true;
       if (ps.backgroundImage !== "none") return true;
       for (const side of ["Top", "Right", "Bottom", "Left"]) {
-        if (Number.parseFloat(ps[`border-${side.toLowerCase()}-width`]) > 0 && !/^0|none$/.test(ps[`border-${side.toLowerCase()}-style`] ?? "none")) return true;
+        if (Number.parseFloat(ps.getPropertyValue(`border-${side.toLowerCase()}-width`)) > 0 && !/^0|none$/.test(ps.getPropertyValue(`border-${side.toLowerCase()}-style`) ?? "none")) return true;
       }
       if (ps.boxShadow !== "none" && ps.boxShadow !== "") return true;
       if (ps.outlineStyle !== "none" && (Number.parseFloat(ps.outlineWidth) || 0) > 0) return true;
@@ -669,7 +669,7 @@ function keyboardRuntime({ props }) {
      * tabbed the same row cleanly). @param {number} index */
     inCarousel(index) {
       const el = elements[index];
-      if (!el) return el?.isConnected ? true : false;
+      if (!el || !el.isConnected) return false;
       return !!el.closest("[class*=carousel], [class*=swiper], [class*=slider-track], [class*=track]") || !!el.closest("[aria-roledescription=carousel]");
     },
     /**

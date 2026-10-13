@@ -222,6 +222,7 @@ Details and the ADA references: [docs/conformance-level.md](docs/conformance-lev
 | keyboard: `focus-changes-context` | 3.2.1 | A | receiving focus navigates the page |
 | keyboard: `skip-link-broken` | 2.4.1 | A | a skip link whose activation goes nowhere (no "missing skip link" rule: axe's `bypass` covers it, and first-stop heuristics misread consent banners) |
 | textSpacing: `text-spacing-clipped` | 1.4.12 | AA | text that a confirmed glyph-range crossing (or a new ellipsis) shows is cut once line height, letter, word and paragraph spacing are raised to the WCAG values; box surplus from decoration or padding, and by-design-hidden text, do not count (warns by default) |
+| textResize: `text-resize-locked` | 1.4.4 | AA | text whose computed font size does not change when the default font size doubles — the font-size preference is ignored for it (px/pt-locked); full-page zoom still magnifies |
 | consistency: `duplicate-page-title`, `inconsistent-navigation` | 2.4.2, 3.2.3 | A, AA | runner only: titles shared across pages, primary navigation that differs between pages |
 
 Every check has a seeded defect page under [fixtures/](fixtures/) and a spec
