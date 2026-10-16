@@ -1,5 +1,7 @@
 # ramp-check
 
+This is an experimental tool. Still identifying and filtering out false positives.
+
 <!-- Decorative: the H1 above carries the name, so assistive tech skips this. -->
 <pre aria-hidden="true">
   ____      _    __  __ ____     ____ _   _ _____ ____ _  __
