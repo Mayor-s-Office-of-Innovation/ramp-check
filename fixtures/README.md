@@ -27,6 +27,8 @@ it still catches it. A check without a page here is not done.
 | `keyboard-focus-navigates.html` | keyboard | A select that navigates when it receives focus. |
 | `text-spacing-clipped.html` | textSpacing | A fixed-height card and a nextjs-class ellipsis chip that clip once spacing is raised (fires, via text-crossing / ellipsis); a pre-truncated box, a fluid box, an aria-hidden-deco hero and an sr-only-in-clipped-box holder that must stay quiet. |
 | `resize-text-locked.html` | textResize | A px-locked card (fires: preference ignored), a rem-sized card that grows (quiet), and a nested-inherited case blamed once (quiet child). |
+| `reading-level-advanced.html` | readingLevel | Dense administrative prose in `main` (fires, grade well above 9), beside plain text in the nav, an aside, an aria-hidden paragraph and a hidden one that must not dilute the score. |
+| `reading-level-plain.html` | readingLevel | Over a hundred words of plain language with a few proper names mid-sentence. Must stay quiet; proves the names are dropped and the ceiling holds. |
 | `patterns-dialog.html` | patterns | A native modal done right, and a class-toggled div that moves no focus, leaks Tab, ignores Escape and returns nothing. |
 | `patterns-live.html` | patterns | A status region that announces, a plain div that does not, and an alert created with its content. |
 | `patterns-form.html` | patterns | Errors identified with text and focus; a red border alone; native browser validation. |

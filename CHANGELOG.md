@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- New `readingLevel` check (`reading-level-advanced`, 3.1.5 AAA, warns by
+  default): scores the page's main text with the Automated Readability Index
+  and reports when it rounds above grade 9, the end of lower secondary
+  education, which is the level the criterion names. Headings, navigation,
+  banners, footers, asides, controls, code and hidden text are not counted,
+  and capitalized words that do not open a sentence are dropped as the
+  criterion's "proper names and titles". Pages whose `lang` is not English
+  are not measured (the formula is English-calibrated), nor are pages under
+  100 body words. Warns rather than blocks because a simpler supplemental
+  version satisfies 3.1.5 and a formula cannot see one; promote with
+  `checks: { readingLevel: "block" }`. Options: `maxGrade`, `minWords`,
+  `selector`. `analyzeReadingLevel(text)` is exported for teams scoring
+  their own extractions. Fixtures: fixtures/reading-level-advanced.html,
+  fixtures/reading-level-plain.html. Doc: docs/reading-level.md.
 - New `textResize` check (`text-resize-locked`, 1.4.4 AA, blocks by default):
   emulates a user doubling their browser's default font size (html font-size
   200%) and reports every text element whose computed font size does not

@@ -14,7 +14,7 @@ await runChecks(page, { policy: "wcag22-aa" });
 | Policy | Blocks | Warns |
 | --- | --- | --- |
 | `wcag-aaa` (default) | every WCAG 2.2 A, AA and AAA finding, and this tool's own checks | nothing |
-| `wcag22-aa` | WCAG 2.2 A and AA | AAA findings, including the motion audit (2.3.3) |
+| `wcag22-aa` | WCAG 2.2 A and AA | AAA findings, including the motion audit (2.3.3) and the reading level check (3.1.5) |
 | `wcag21-aa` | WCAG 2.1 A and AA | everything WCAG 2.2 added (2.4.11, 2.5.8, 3.3.8 and friends), and AAA |
 
 ## How the decision is made

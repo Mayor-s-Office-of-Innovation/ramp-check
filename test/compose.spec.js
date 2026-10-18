@@ -20,7 +20,7 @@ matrix({ colorScheme: ["light", "dark"] }, (cell) => {
     await expect(page).toHaveTitle("Keyboard: clean");
     const result = await a11y.check(`composed (${cell.name})`);
     expect(result.policy).toBe("wcag22-aa");
-    expect(result.ran).toEqual(["axe", "reflow", "textResize", "keyboard"]);
+    expect(result.ran).toEqual(["axe", "reflow", "textResize", "readingLevel", "keyboard"]);
   });
 }, { test });
 

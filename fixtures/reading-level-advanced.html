@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reading level: advanced main text</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer, aside { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    a { color: #0b4f8a; }
+    a:focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <!-- Not body text: navigation is skipped, however plain it is. -->
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="#main">Apply</a></nav>
+  </header>
+  <main id="main">
+    <!-- Headings are "titles" in 3.1.5 terms and are dropped. -->
+    <h1>Residential parking permit eligibility determination procedures</h1>
+    <!-- Seeded defect: dense administrative prose far above lower secondary level. -->
+    <p>Notwithstanding the aforementioned considerations, applicants demonstrating insufficient documentation regarding residential eligibility requirements shall be notified through correspondence delineating supplementary verification procedures necessary for reconsideration.</p>
+    <p>Furthermore, individuals whose circumstances encompass multiple concurrent residential affiliations must substantiate their predominant domicile utilizing contemporaneous utility statements, lease agreements, or equivalently authoritative instruments acceptable to the administering department.</p>
+    <p>Determinations rendered pursuant to these procedures remain provisional pending comprehensive administrative review, notwithstanding preliminary communications suggesting otherwise, and applicants acknowledging receipt thereby accept responsibility for subsequent compliance obligations.</p>
+    <p>Reconsideration requests submitted subsequent to the enumerated deadline shall be adjudicated exclusively at departmental discretion, contingent upon demonstrable extenuating circumstances substantiated through contemporaneous documentation satisfying evidentiary thresholds articulated herein.</p>
+    <!-- Decoration and hidden text are not body text. -->
+    <p aria-hidden="true">Easy words here. Easy words here. Easy words here. Easy words here. Easy words here.</p>
+    <p hidden>Easy words here. Easy words here. Easy words here. Easy words here. Easy words here.</p>
+  </main>
+  <aside>
+    <!-- Not body text: complementary content is skipped. -->
+    <p>This is a short, plain note in a sidebar. It is easy to read. It does not count.</p>
+  </aside>
+  <footer>
+    <p>Fixture for ramp-check.</p>
+  </footer>
+</body>
+</html>
