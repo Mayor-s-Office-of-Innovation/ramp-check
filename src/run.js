@@ -10,11 +10,20 @@ import { reflowCheck } from "./checks/reflow.js";
 import { keyboardAudit } from "./checks/keyboard.js";
 import { textSpacing } from "./checks/text-spacing.js";
 import { textResize } from "./checks/resize-text.js";
+import { readingLevel } from "./checks/reading-level.js";
 import { applyAllowlist, loadAllowlist } from "./checks/allowlist.js";
 import { resolvePolicy, severityFor } from "./policy.js";
 
 /** @typedef {import("@playwright/test").Page} Page */
 /** @typedef {import("./types.js").Finding} Finding */
+
+/**
+ * Checks that warn unless promoted: their criterion can be satisfied by
+ * something the check cannot see (legitimate fixed boxes; a supplemental
+ * simpler version of the text).
+ * @type {Set<string>}
+ */
+const WARN_BY_DEFAULT = new Set(["textSpacing", "readingLevel"]);
 /** @typedef {import("./types.js").Mode} Mode */
 /** @typedef {import("./types.js").CheckName} CheckName */
 /** @typedef {import("./types.js").AllowlistEntry} AllowlistEntry */
@@ -26,10 +35,12 @@ import { resolvePolicy, severityFor } from "./policy.js";
  * @property {Mode} [bestPractice]   axe's non-WCAG rules: "block" (default) | "warn" | "off"
  * @property {Partial<Record<CheckName, Mode | "auto">>} [checks]
    * per-check override. "auto" (default) lets the policy decide; "block" or
-   * "warn" forces it; "off" skips the check. `textSpacing` defaults to "warn";
+   * "warn" forces it; "off" skips the check. `textSpacing` and `readingLevel`
+   * default to "warn".
  * @property {import("./checks/motion.js").MotionAuditOptions} [motion]
  * @property {import("./checks/reflow.js").ReflowOptions} [reflow]
  * @property {import("./checks/keyboard.js").KeyboardAuditOptions} [keyboard]
+ * @property {import("./checks/reading-level.js").ReadingLevelOptions} [readingLevel]
  * @property {string[]} [tags]       escape hatch: raw axe tags (see docs/config.md)
  * @property {string[]} [disableRules]  axe rule ids to skip entirely; prefer the allowlist
  * @property {string | AllowlistEntry[]} [allowlist]  path to JSON, or inline entries
@@ -50,6 +61,7 @@ import { resolvePolicy, severityFor } from "./policy.js";
  * @property {import("./checks/motion.js").MotionAuditResult} [motion]
  * @property {import("./checks/keyboard.js").KeyboardAuditResult} [keyboard]
  * @property {import("./checks/text-spacing.js").TextSpacingResult} [textSpacing]
+ * @property {import("./checks/reading-level.js").ReadingLevelResult} [readingLevel]
  */
 
 /**
@@ -68,7 +80,7 @@ import { resolvePolicy, severityFor } from "./policy.js";
 export async function runChecks(page, config = {}, ctx = {}) {
   const modes = config.checks ?? {};
   /** @param {CheckName} name */
-  const mode = (name) => modes[name] ?? (name === "textSpacing" ? "warn" : "auto");
+  const mode = (name) => modes[name] ?? (WARN_BY_DEFAULT.has(name) ? "warn" : "auto");
   /** @type {CheckName[]} */
   const ran = [];
   /** @type {Finding[]} */
@@ -79,6 +91,8 @@ export async function runChecks(page, config = {}, ctx = {}) {
   let keyboard;
   /** @type {import("./checks/text-spacing.js").TextSpacingResult | undefined} */
   let spacing;
+  /** @type {import("./checks/reading-level.js").ReadingLevelResult | undefined} */
+  let reading;
 
   // Motion first, before anything waits: only motion still running is visible.
   if (mode("motion") !== "off" && ctx.reducedMotion) {
@@ -112,6 +126,11 @@ export async function runChecks(page, config = {}, ctx = {}) {
     findings.push(...resize.findings);
     ran.push("textResize");
   }
+  if (mode("readingLevel") !== "off") {
+    reading = await readingLevel(page, config.readingLevel);
+    findings.push(...reading.findings);
+    ran.push("readingLevel");
+  }
   // Keyboard last: it moves focus (restored afterwards) and is the slowest.
   if (mode("keyboard") !== "off") {
     keyboard = await keyboardAudit(page, config.keyboard);
@@ -120,7 +139,7 @@ export async function runChecks(page, config = {}, ctx = {}) {
   }
 
   const classified = classify(findings, config, ctx);
-  return { label: ctx.label ?? "", ran, ...classified, motion, keyboard, textSpacing: spacing };
+  return { label: ctx.label ?? "", ran, ...classified, motion, keyboard, textSpacing: spacing, readingLevel: reading };
 }
 
 /**
@@ -134,7 +153,7 @@ export function classify(findings, config = {}, ctx = {}) {
   const policy = resolvePolicy(config.policy);
   const modes = config.checks ?? {};
   for (const f of findings) {
-    const override = modes[f.check] ?? (f.check === "textSpacing" ? "warn" : "auto");
+    const override = modes[f.check] ?? (WARN_BY_DEFAULT.has(f.check) ? "warn" : "auto");
     const sev = severityFor(f.wcag, policy, {
       bestPractice: config.bestPractice,
       override: override === "auto" ? undefined : override,

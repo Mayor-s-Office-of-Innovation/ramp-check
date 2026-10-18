@@ -1,7 +1,7 @@
 {
   "name": "ramp-check",
   "version": "0.1.0",
-  "description": "Automated accessibility checks for Playwright: everything axe checks, plus motion, keyboard, reflow, and cross-page consistency.",
+  "description": "Automated accessibility checks for Playwright: everything axe checks, plus motion, keyboard, reflow, reading level, and cross-page consistency.",
   "license": "MIT",
   "repository": {
     "type": "git",

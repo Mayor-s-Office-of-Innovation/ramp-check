@@ -9,6 +9,7 @@ export { reflowCheck } from "./checks/reflow.js";
 export { keyboardAudit } from "./checks/keyboard.js";
 export { textSpacing, TEXT_SPACING_CSS } from "./checks/text-spacing.js";
 export { textResize, TEXT_RESIZE_CSS } from "./checks/resize-text.js";
+export { readingLevel, analyzeReadingLevel, DEFAULT_MAX_GRADE, DEFAULT_MIN_WORDS } from "./checks/reading-level.js";
 export { siteConsistency, PRIMARY_NAV_SELECTOR } from "./checks/consistency.js";
 export {
   loadBaseline,

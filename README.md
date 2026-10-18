@@ -15,7 +15,8 @@ Automated accessibility checks for Playwright, easy to add to CI.
 
 Everything axe checks, plus the things axe structurally cannot: motion
 (does the page honor reduced motion?), keyboard (can you reach everything?),
-reflow (does it fit a narrow screen?), and consistency across pages.
+reflow (does it fit a narrow screen?), reading level (can most people read
+the main text?), and consistency across pages.
 
 Status: 0.1.0. The checks, the Playwright fixtures, the patterns module, the
 config-driven CLI with reports and a baseline ratchet, and the GitHub Action
@@ -225,6 +226,7 @@ Details and the ADA references: [docs/conformance-level.md](docs/conformance-lev
 | keyboard: `skip-link-broken` | 2.4.1 | A | a skip link whose activation goes nowhere (no "missing skip link" rule: axe's `bypass` covers it, and first-stop heuristics misread consent banners) |
 | textSpacing: `text-spacing-clipped` | 1.4.12 | AA | text that a confirmed glyph-range crossing (or a new ellipsis) shows is cut once line height, letter, word and paragraph spacing are raised to the WCAG values; box surplus from decoration or padding, and by-design-hidden text, do not count (warns by default) |
 | textResize: `text-resize-locked` | 1.4.4 | AA | text whose computed font size does not change when the default font size doubles — the font-size preference is ignored for it (px/pt-locked); full-page zoom still magnifies |
+| readingLevel: `reading-level-advanced` | 3.1.5 | AAA | main text whose Automated Readability Index rounds above grade 9, the end of lower secondary education, after dropping headings, navigation, asides, controls, hidden text and mid-sentence capitalized words (the criterion's "proper names and titles"); English pages with at least 100 body words. A simpler supplemental version satisfies the criterion and a formula cannot see one, so this warns by default. See [docs/reading-level.md](docs/reading-level.md) |
 | consistency: `duplicate-page-title`, `inconsistent-navigation` | 2.4.2, 3.2.3 | A, AA | runner only: titles shared across pages, primary navigation that differs between pages |
 
 Every check has a seeded defect page under [fixtures/](fixtures/) and a spec
@@ -292,8 +294,10 @@ exception: the fixtures install a page init script that records every
 ## What this does not catch
 
 Automated tools find a fraction of accessibility problems. This tool
-covers axe's share plus motion, reflow, and keyboard reachability and focus
-visibility. It does not test screen-reader output, content quality, timing,
+covers axe's share plus motion, reflow, reading level, and keyboard
+reachability and focus visibility. The reading level check scores a formula,
+not comprehension, and cannot see a plain-language summary that would satisfy
+3.1.5. It does not test screen-reader output, content quality, timing,
 arrow-key or Enter/Space operation of custom widgets, or whether a flow makes
 sense. The keyboard audit's blind spots are listed in
 [docs/keyboard-limitations.md](docs/keyboard-limitations.md). Most government accessibility standards require manual

@@ -29,7 +29,7 @@ test.describe("config runner", () => {
       "/clean.html [reducedMotion: reduce]",
       "guarded motion [reducedMotion: reduce]",
     ]);
-    expect(report.states[0].result?.ran).toEqual(["motion", "axe", "reflow", "textSpacing", "textResize", "keyboard"]);
+    expect(report.states[0].result?.ran).toEqual(["motion", "axe", "reflow", "textSpacing", "textResize", "readingLevel", "keyboard"]);
     expect(report.failing).toEqual([]);
     expect(report.consistency).toEqual([]);
   });

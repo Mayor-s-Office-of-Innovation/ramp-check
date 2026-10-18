@@ -50,7 +50,7 @@ with `reducedMotion: "reduce"`.
 | --- | --- | --- | --- |
 | `policy` | `"wcag-aaa" \| "wcag22-aa" \| "wcag21-aa"` | `"wcag-aaa"` | Which findings block. See [conformance-level.md](conformance-level.md). |
 | `bestPractice` | `"block" \| "warn" \| "off"` | `"block"` | axe's non-WCAG rules, and this tool's best-practice rules. |
-| `checks` | object | all `"auto"`, `textSpacing: "warn"` | Per-check mode: `auto`, `block`, `warn`, `off`. Keys: `axe`, `motion`, `reflow`, `keyboard`, `textSpacing`, `textResize`. |
+| `checks` | object | all `"auto"`; `textSpacing` and `readingLevel` `"warn"` | Per-check mode: `auto`, `block`, `warn`, `off`. Keys: `axe`, `motion`, `reflow`, `keyboard`, `textSpacing`, `textResize`, `readingLevel`. |
 | `tags` | string[] | | Escape hatch: raw axe tags, replaces the derived list. |
 | `disableRules` | string[] | | axe rule ids to skip entirely. Prefer the allowlist. |
 | `reportWarnings` | `"log" \| "quiet"` | `"log"` | Fixtures only: print warnings to the test output on passing runs. |
@@ -63,6 +63,11 @@ reflow: { width: 320 },                // CSS px
 keyboard: {
   maxSteps: 500,                       // Tab budget (default 2 × controls + 20)
   screenshotFallback: true,            // pixel-compare when styles do not change
+},
+readingLevel: {
+  maxGrade: 9,                         // highest ARI grade that passes (lower secondary ends at 9)
+  minWords: 100,                       // shorter main text is not measured
+  selector: "main",                    // where the body text lives (default: main, [role=main], article, body)
 },
 ```
 

@@ -8,7 +8,7 @@
 /** @typedef {"2.0" | "2.1" | "2.2"} WcagVersion */
 /** @typedef {"block" | "warn"} Severity */
 /** @typedef {"block" | "warn" | "off"} Mode */
-/** @typedef {"axe" | "motion" | "reflow" | "keyboard" | "textSpacing" | "textResize" | "consistency" | "pattern"} CheckName */
+/** @typedef {"axe" | "motion" | "reflow" | "keyboard" | "textSpacing" | "textResize" | "readingLevel" | "consistency" | "pattern"} CheckName */
 
 /**
  * The WCAG success criterion a finding enforces.
