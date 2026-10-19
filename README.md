@@ -232,6 +232,11 @@ Details and the ADA references: [docs/conformance-level.md](docs/conformance-lev
 Every check has a seeded defect page under [fixtures/](fixtures/) and a spec
 under [test/](test/) proving it fires.
 
+Before a check earns adopter-facing trust it runs against a 100-origin
+[web corpus](docs/test-corpus.md) and every finding class is manually
+adjudicated; per-check records and validation status:
+[docs/audit-status.md](docs/audit-status.md).
+
 ## Adopting with existing debt: the baseline
 
 `npx ramp-check baseline` records every current failure with a 180-day
