@@ -13,9 +13,14 @@ Three corpus runs are behind this page:
 
 | Run | Date | Engine | Checked URLs | Findings (axe / ramp-check) | Purpose |
 | --- | --- | --- | --- | --- | --- |
-| v1 | Oct 8 2026 | pre-fix | 74 | 3,678 / 944 | false-positive discovery |
-| v2 | Oct 8 2026 | honesty gates + text-spacing rewrite | 70 | 3,538 / 681 | FP-delta measurement |
-| probe | Oct 15 2026 | + text-resize check | 60 of 43 new origins | 5,610 / 1,594 | validate the 47 corpus additions |
+| v1 | Oct 8 2026 | pre-fix | 68 | 3,060 / 927 | false-positive discovery |
+| v2 | Oct 8 2026 | honesty gates + text-spacing rewrite | 64 | 2,920 / 664 | FP-delta measurement |
+| probe | Oct 15 2026 | + text-resize check | 67 | 5,610 / 1,594 | validate the corpus additions |
+
+Every count on this page excludes three origins that were later removed from
+the published record and from the standing seeds
+([test-corpus.md](test-corpus.md)); their 635 findings per run do not appear
+in any total or table here.
 
 Statuses used below:
 
@@ -62,11 +67,11 @@ Saturations on the corpus (origins affected out of 100):
 
 | Rule | v2 | probe | Example sites |
 | --- | --- | --- | --- |
-| `color-contrast-enhanced` | 43 | 44 | gov.uk, webaim.org, developer.mozilla.org; npr.org, aljazeera.net, booking.com |
-| `region` | 30 | 32 | developer.mozilla.org, gov.uk, scangov.com |
-| `color-contrast` (4.5:1) | 16 | 20 | scangov.org, debian.org, techcrunch.com |
-| `landmark-unique` / `heading-order` | 14 | 21 / 13 | wikipedia.org, archive.org, vuejs.org |
-| `target-size` | 11 | 13 | developer.mozilla.org, standards.scangov.org, www.debian.org |
+| `color-contrast-enhanced` | 40 | 44 | gov.uk, webaim.org, developer.mozilla.org; npr.org, aljazeera.net, booking.com |
+| `region` | 27 | 32 | gov.uk, developer.mozilla.org, angular.dev |
+| `color-contrast` (4.5:1) | 16 | 20 | scangov.org, techcrunch.com, www.debian.org |
+| `heading-order` / `landmark-unique` | 14 / 13 | 13 / 21 | docs.aws.amazon.com, docs.python.org; nuxt.com, bbc.com |
+| `target-size` | 10 | 13 | developer.mozilla.org, www.debian.org, craigslist.org |
 | `link-name` | 4 | 12 | techcrunch.com, news.ycombinator.com, npr.org |
 | `image-alt` | 1 | 12 | news.ycombinator.com; npr.org, aljazeera.net |
 
@@ -115,12 +120,13 @@ axe only covers targets-not-existing, not activation-not-moving-focus.
 
 Rule verified honestly on the corpus with the pixel-probe machinery:
 computed-style diff at rest vs `:focus-visible` plus a screenshot diff
-fallback. The first three adjudicated sites were user-confirmed real defects.
+fallback. The anchor case was user-confirmed as a real site defect; two
+sibling origins from the same design family were validated alongside it and
+have since been removed from the published record.
 
 | Site | Findings | Run | Status |
 | --- | --- | --- | --- |
 | scangov.org | 1 | v2 | TP (user-verified: the nav-pill chip's own `.active:focus` rule overrides the focus ring; pixels byte-identical) |
-| standards.scangov.org | 2 | v2 | TP (same design family, docs page) |
 | techcrunch.com | 1 | v2 | pending ("Do Not Sell" footer button; live probe suggests honest — no visible indicator) |
 | debian.org | 1 | v2 | pending |
 | craigslist.org | 4 | v2 | pending |
@@ -145,12 +151,12 @@ Measurements verified honest; the open product question is whether to defer
 while a dismissible overlay is open (the banner-open mechanism). One class of
 FP was proven and fixed: paint-transparent occluders (the stretched-link card
 pattern) no longer count as coverage — nuxt.com's finding cleared after the
-fix.
+fix. A validated second banner-open case (skip links under a consent banner)
+was confirmed on an origin since removed from the published record.
 
 | Site | focus-obscured | focus-partially | Run | Status |
 | --- | --- | --- | --- | --- |
 | wikipedia.org (www) | 7 | 2 | v2 | TP (site's own fundraising notice covers language links/search; user re-verified; banner-open) |
-| scangov.com | 2 | — | v2 | TP (skip links under the site's own consent banner; banner-open) |
 | scangov.org | — | 1 | v2 | pending (banner-open class) |
 | en.wikipedia.org | — | 5 | v2 | pending (same centralNotice overlay class) |
 | wix.com (www) | 8 | 7 | v2 | pending |
@@ -220,7 +226,7 @@ trap.
 
 ### focus-indicator-thin (2.4.13 AAA)
 
-Summarized rather than tabulated: 406 findings on 28 origins (v2) and 533 on
+Summarized rather than tabulated: 394 findings on 27 origins (v2) and 533 on
 35 more (probe) — the corpus's noisiest custom rule. Known FP mechanism: the
 Chrome default ring is `outline: auto 1px` — computed 1 px but painted as a
 2 px+ halo, so style math sees "thin" where pixels see a ring. The v1
@@ -274,7 +280,6 @@ read as the same honest shape.
 | debian.org | 2 | v2 | pending |
 | getbootstrap.com | 2 | v2 | pending |
 | archive.org, nextjs.org | 1 each | v2 | pending |
-| docs.scangov.org | 1 | v2 | pending (35 px page scroll at 320 px; round-4 queue) |
 | costco.com | 16 | probe | pending |
 | scmp.com | 13 | probe | pending |
 | ant.design | 17 | probe | pending |
@@ -308,9 +313,9 @@ text no longer count. The v1 rows this removed were confirmed FPs.
 `text-resize-locked` — text whose computed font size does not change when the
 user's default font size doubles. Implemented after the v2 corpus run, so it
 has never been adjudicated: its only corpus contact is the probe run, where
-it fired on **41 of 43 origins (518 findings)** — everything from plain
-markup (kernel.org, perl.org, gutenberg.org) to design systems (ant.design
-20, mui.com 10). Px-locked text is that common on the web. Before this rule
+it fired on **41 of the 48 probe-checked origins (518 findings)** —
+everything from plain markup (kernel.org, perl.org, gutenberg.org) to design
+systems (ant.design 20, mui.com 10). Px-locked text is that common on the web. Before this rule
 can be treated as honest signal it needs the same cycle the others got: is
 "the font-size preference is ignored" the right complaint, is the finding
 granularity right (does one px-locked element per site drown the signal), and
@@ -331,7 +336,7 @@ multi-page pass.
 - **Obscured focus while a dismissible overlay is open** — measurements are
   honest; defer/downgrade while the banner is up, or annotate? (banner-open
   rows above)
-- **Best-practice axe rules block under every policy** — `region` (30
+- **Best-practice axe rules block under every policy** — `region` (27
   origins), `heading-order`, `landmark-unique` are blocking today; flipping
   them to warn under AA policies is a deliberate softening with large blast
   radius, pending.
