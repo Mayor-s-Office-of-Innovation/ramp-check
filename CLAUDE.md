@@ -36,4 +36,5 @@ fixtures/     seeded defect pages
 test/         the tool's own Playwright specs
 docs/         quickstart, conformance-level, config, allowlist, baseline, manual checklist
 examples/
+tools/        sweep.js + report-aa.mjs (corpus runner; its data stays gitignored in sweep/)
 ```
