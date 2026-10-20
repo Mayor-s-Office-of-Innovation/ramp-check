@@ -121,6 +121,20 @@ test.describe("config runner", () => {
     expect(none.states[0].screenshot).toBeNull();
   });
 
+  test("storageState seeds every cell's context", async ({}, testInfo) => {
+    const state = testInfo.outputPath("state.json");
+    writeFileSync(state, JSON.stringify({ cookies: [], origins: [{ origin: baseURL, localStorage: [{ name: "ramp", value: "seeded" }] }] }));
+    const report = await runSite({
+      baseURL, pages: [{ path: "/clean.html", setup: async (page) => {
+        const v = await page.evaluate(() => localStorage.getItem("ramp"));
+        if (v !== "seeded") throw new Error(`storageState not applied: ${v}`);
+      } }],
+      matrix: { colorScheme: ["light", "dark"] }, storageState: state, checks: { keyboard: "off" }, consistency: false,
+    });
+    expect(report.errors).toEqual([]);
+    expect(report.ok).toBe(true);
+  });
+
   test("the allowlist applies across the site", async () => {
     const report = await runSite({
       baseURL,
