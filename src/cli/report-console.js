@@ -32,6 +32,11 @@ export function consoleReport(r) {
     lines.push("", `Warnings (${r.warnings.length}, not blocking under ${r.policy}):`);
     for (const l of r.warnings) lines.push(`  ⚠ ${formatLocated(l)}`);
   }
+  const unshown = r.states.flatMap((s) => (s.screenshot?.unlocated ?? []).map((u) => `${s.cell ? `${s.page} (${s.cell})` : s.page}: ${u.rule} ${u.target} (${u.reason})`));
+  if (unshown.length) {
+    lines.push("", `Not in the screenshots (${unshown.length}):`);
+    for (const u of unshown) lines.push(`  · ${u}`);
+  }
   if (r.allowlisted.length) {
     lines.push("", `Allowlisted (${r.allowlisted.length}):`);
     for (const l of r.allowlisted) {

@@ -91,6 +91,36 @@ test.describe("config runner", () => {
     expect(markdownReport(expired)).toContain("### Expired exceptions (3)");
   });
 
+  test("writes one highlight screenshot per state with findings, and the reports point at it", async ({}, testInfo) => {
+    const screenshotDir = testInfo.outputPath("screenshots");
+    const report = await runSite(
+      { baseURL, pages: ["/axe-contrast.html", "/clean.html"], matrix: { colorScheme: ["light"] }, policy: "wcag22-aa", checks: { keyboard: "off", reflow: "off", readingLevel: "off" }, consistency: false,
+        allowlist: [{ rule: "image-alt", target: "#no-alt", reason: "decorative, alt pending", expires: "2099-01-01" }] },
+      { screenshotDir },
+    );
+    expect(report.screenshotDir).toBe(screenshotDir);
+    expect(report.states.map((s) => s.screenshot?.file ?? null)).toEqual(["01-axe-contrast-html-colorscheme-light.png", null]);
+    expect(existsSync(join(screenshotDir, "01-axe-contrast-html-colorscheme-light.png"))).toBe(true);
+    // The allowlisted finding has no box; the blocking finding is box 1, the warning box 2.
+    expect(report.states[0].screenshot?.markers).toBe(2);
+    expect(keys(report.failing)).toEqual(["/axe-contrast.html: color-contrast #fails-aa"]);
+    expect(report.failing[0].finding.marker).toBe(1);
+    expect(keys(report.warnings)).toEqual(["/axe-contrast.html: color-contrast-enhanced #aa-only"]);
+    expect(report.warnings[0].finding.marker).toBe(2);
+    expect(report.allowlisted[0].finding.marker).toBeUndefined();
+    const md = markdownReport(report);
+    expect(md).toContain("| # | Page | Rule |");
+    expect(md).toContain("| 1 | /axe-contrast.html (colorScheme: light) | `color-contrast` |");
+    expect(md).toContain("| 2 | /axe-contrast.html (colorScheme: light) | `color-contrast-enhanced` |");
+    expect(md).toContain("<details><summary>Screenshots (1, in the report directory's `screenshots/`)</summary>");
+    expect(md).toContain("`01-axe-contrast-html-colorscheme-light.png`, 2 boxes");
+    expect(consoleReport(report)).toContain("✘ /axe-contrast.html (colorScheme: light): [1] color-contrast: #fails-aa");
+
+    const none = await runSite({ baseURL, pages: ["/axe-contrast.html"], checks: { keyboard: "off", reflow: "off", readingLevel: "off" }, consistency: false, screenshot: { mode: "off" } }, { screenshotDir });
+    expect(none.screenshotDir).toBeNull();
+    expect(none.states[0].screenshot).toBeNull();
+  });
+
   test("the allowlist applies across the site", async () => {
     const report = await runSite({
       baseURL,
@@ -140,6 +170,8 @@ test.describe("cli", () => {
     expect(code).toBe(1);
     const text = lines.join("\n");
     expect(text).toContain("policy wcag22-aa");
+    expect(text).toContain("Screenshots: " + testInfo.outputPath("r", "screenshots"));
+    expect(existsSync(join(testInfo.outputPath("r", "screenshots"), "01-axe-contrast-html.png"))).toBe(true);
     expect(text).toMatch(/Warnings \(\d+, not blocking under wcag22-aa\)/);
     expect(text).toContain("color-contrast-enhanced");
   });

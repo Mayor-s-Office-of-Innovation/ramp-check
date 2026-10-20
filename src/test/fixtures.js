@@ -19,6 +19,11 @@
  * them in the attachment and annotations only. `check()` also returns the
  * full result, so `result.warnings` is there for programmatic use.
  *
+ * When a check finds anything, a screenshot of the state with every finding
+ * boxed and numbered is attached beside the JSON; the `[n]` at the start of
+ * each failure line is the box number. `a11yConfig: { screenshot: { mode:
+ * "off" } }` turns it off; see docs/config.md for the other options.
+ *
  * Already have a `page` fixture that logs in? Extend THIS `test`, not
  * Playwright's: `const myTest = test.extend({ page: async ({ page }, use) => { await login(page); await use(page); } })`.
  * Extending the wrong base shows up at runtime as
@@ -27,6 +32,7 @@
 import { test as base, expect } from "@playwright/test";
 import { motionRuntime } from "../checks/motion.js";
 import { classify, failures, formatFinding, runChecks } from "../run.js";
+import { describeUnlocated, highlightFindings } from "../screenshot.js";
 import { matrix } from "./matrix.js";
 
 /** @typedef {import("../run.js").RampCheckConfig} RampCheckConfig */
@@ -36,7 +42,8 @@ import { matrix } from "./matrix.js";
  * @typedef {object} A11y
  * @property {(label: string, overrides?: RampCheckConfig) => Promise<CheckResult>} check
  *   run the checks and fail the test on blocking findings; warnings are
- *   annotated and the full result is attached as JSON
+ *   annotated, the full result is attached as JSON, and a highlight
+ *   screenshot is attached when there is anything to show
  * @property {(label: string, overrides?: RampCheckConfig) => Promise<CheckResult>} scan
  *   run the checks and return the result without asserting
  * @property {(label: string, findings: import("../types.js").Finding[], overrides?: RampCheckConfig) => Promise<void>} assert
@@ -72,12 +79,16 @@ export const test = base.extend(
             reducedMotion: reducedMotion === "reduce",
           }),
         check: async (label, overrides) => {
+          const config = merge(a11yConfig, overrides);
           const result = await api.scan(label, overrides);
+          // Before the JSON attach, so the findings carry their box numbers.
+          const shot = await highlightFindings(page, result.findings, config.screenshot);
           await testInfo.attach(`ramp-check: ${label}`, {
             body: JSON.stringify(result, null, 2),
             contentType: "application/json",
           });
-          reportWarnings(label, result, merge(a11yConfig, overrides));
+          await attachShot(label, shot);
+          reportWarnings(label, result, config);
           for (const e of result.unused) {
             testInfo.annotations.push({
               type: "a11y-allowlist-unused",
@@ -88,16 +99,33 @@ export const test = base.extend(
           return result;
         },
         assert: async (label, findings, overrides) => {
-          const classified = classify(findings, merge(a11yConfig, overrides));
+          const config = merge(a11yConfig, overrides);
+          const classified = classify(findings, config);
           const result = { label, ran: [], ...classified };
+          const shot = await highlightFindings(page, result.findings, config.screenshot);
           await testInfo.attach(`ramp-check: ${label}`, {
             body: JSON.stringify(result, null, 2),
             contentType: "application/json",
           });
-          reportWarnings(label, result, merge(a11yConfig, overrides));
+          await attachShot(label, shot);
+          reportWarnings(label, result, config);
           expect(failures(result), `${label}: accessibility findings (policy ${result.policy})`).toEqual([]);
         },
       };
+
+      /**
+       * Attach the highlight screenshot and say which findings it could not
+       * box, so nothing goes missing silently.
+       * @param {string} label
+       * @param {import("../screenshot.js").Highlight | null} shot
+       */
+      async function attachShot(label, shot) {
+        if (!shot) return;
+        await testInfo.attach(`ramp-check: ${label} (highlighted)`, { body: shot.png, contentType: "image/png" });
+        for (const line of describeUnlocated(shot)) {
+          testInfo.annotations.push({ type: "a11y-not-in-screenshot", description: `${label}: ${line}` });
+        }
+      }
 
       /**
        * Annotate every warning and, unless quiet, print it so a passing run
@@ -132,6 +160,7 @@ function merge(base, overrides) {
     checks: { ...base.checks, ...overrides.checks },
     motion: { ...base.motion, ...overrides.motion },
     reflow: { ...base.reflow, ...overrides.reflow },
+    screenshot: { ...base.screenshot, ...overrides.screenshot },
   };
 }
 

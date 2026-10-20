@@ -53,8 +53,9 @@ npx ramp-check               # visits every page in every matrix cell; exit 1 on
 npx ramp-check baseline      # adopting with existing debt: record it, fail only on new findings
 ```
 
-Reports go to `ramp-check-report/` as JSON and as a Markdown summary sized
-for a pull-request comment. Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
+Reports go to `ramp-check-report/` as JSON, as a Markdown summary sized
+for a pull-request comment, and as one screenshot per page state with every
+finding boxed and numbered (the `[n]` before a finding is its box). Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
 Every option: [docs/config.md](docs/config.md).
 
 ### In CI
@@ -92,7 +93,12 @@ reflow at 320 px, and runs the keyboard audit (a full Tab traversal; see
 [docs/keyboard-limitations.md](docs/keyboard-limitations.md) for what it
 cannot catch).
 Under `reducedMotion: "reduce"` it also runs the motion audit. Blocking findings fail the test with one line each; warnings are
-recorded as test annotations; the full result is attached as JSON.
+recorded as test annotations; the full result is attached as JSON, next to
+a screenshot of the state with every finding boxed and numbered. The `[n]`
+that starts a failure line is its box, so someone who does not read
+selectors can still see which element is meant. Open Playwright's HTML
+report to view it; `a11yConfig: { screenshot: { mode: "off" } }` turns it
+off ([docs/config.md](docs/config.md#screenshots)).
 
 To cover both color schemes and reduced motion in one file, let `a11yMatrix`
 generate the describe blocks. Each cell gets its own correctly scoped

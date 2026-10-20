@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Highlight screenshot targets</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    main { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    .muted { color: #767676; }
+    #dot { display: inline-block; width: 8px; height: 8px; background: #c62828; vertical-align: middle; }
+    #spacer { height: 2600px; background: linear-gradient(#fff, #eef3f8); }
+    #deep { padding: 0.5rem 1rem; }
+    #hidden { display: none; }
+    dialog { border: 1px solid #888; border-radius: 8px; padding: 1rem; }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.2); }
+  </style>
+</head>
+<body>
+  <main id="main">
+    <h1 id="title">Highlight screenshot targets</h1>
+    <p class="muted" id="muted">Muted text that fails two rules at once: it should get one box, not two.</p>
+    <p>A tiny element <span id="dot" aria-hidden="true"></span> that still needs a visible box and badge.</p>
+    <x-card id="card"></x-card>
+    <p id="hidden">Hidden text: no rendered box, must be reported as such.</p>
+    <div id="spacer" aria-hidden="true"></div>
+    <p id="deep">Far down the page: only a full-page capture reaches this.</p>
+    <dialog id="dlg" aria-labelledby="dlg-title">
+      <h2 id="dlg-title">Open dialog</h2>
+      <p>The overlay must draw above this top-layer dialog.</p>
+      <button id="dlg-button" type="button">Close</button>
+    </dialog>
+  </main>
+  <script>
+    customElements.define("x-card", class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: "open" }).innerHTML =
+          '<style>:host{display:block;border:1px solid #ccc;padding:.5rem;border-radius:6px}button{padding:.4rem .8rem}</style>' +
+          '<p>A card with a shadow root.</p><button class="cta" type="button">Shadow button</button>';
+      }
+    });
+    document.getElementById("dlg").showModal();
+  </script>
+</body>
+</html>

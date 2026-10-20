@@ -64,7 +64,7 @@ export async function axeScan(page, opts = {}) {
         message: v.help,
         wcag,
         help: v.helpUrl,
-        data: { impact: v.impact, summary: node.failureSummary },
+        data: { impact: v.impact, summary: node.failureSummary, html: node.html },
       });
     }
   }

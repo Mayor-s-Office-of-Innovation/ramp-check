@@ -33,6 +33,7 @@ it still catches it. A check without a page here is not done.
 | `patterns-live.html` | patterns | A status region that announces, a plain div that does not, and an alert created with its content. |
 | `patterns-form.html` | patterns | Errors identified with text and focus; a red border alone; native browser validation. |
 | `patterns-focus.html` | patterns | A reveal that moves focus to the new heading, and one that leaves it on the button. |
+| `highlight-targets.html` | screenshots | Targets the highlight screenshot must box: one element failing two rules (one box), an 8 px element, a button inside a shadow root, a paragraph 2600 px down (full page), a button inside an open modal dialog (top layer); plus a hidden element and a missing selector that must be reported as not boxed. |
 | `consistency-a.html`, `consistency-b.html` | consistency | Two pages with the same title and different primary navigation. Only the multi-page runner can see this. |
 
 Serve them with `node test/serve.js` (port 4173).
