@@ -14,7 +14,7 @@ import { cells } from "../test/matrix.js";
 import { siteConsistency, PRIMARY_NAV_SELECTOR } from "../checks/consistency.js";
 import { applyBaseline, buildBaseline, loadBaseline, writeBaseline } from "../checks/baseline.js";
 import { resolvePolicy, severityFor } from "../policy.js";
-import { applyAllowlist, loadAllowlist } from "../checks/allowlist.js";
+import { applyAllowlist, entryMatches, isExpired, loadAllowlist } from "../checks/allowlist.js";
 import { normalisePage } from "./config.js";
 
 /** @typedef {import("./config.js").SiteConfig} SiteConfig */
@@ -153,7 +153,10 @@ export async function runSite(config, opts = {}) {
                 nav: (await nav.count()) ? await nav.ariaSnapshot() : null,
               });
             }
-            log(`${state.result.blocking.length ? "✘" : "✓"} ${label}`);
+            // Allowlisted findings are marked above (when screenshots run) or
+            // site-wide below; the progress mark must not count them either way.
+            const blocking = state.result.findings.filter((f) => f.severity === "block" && !entryFor(f, allowEntries, now));
+            log(`${blocking.length ? "✘" : "✓"} ${label}`);
           } catch (err) {
             state.error = err instanceof Error ? err.message.split("\n")[0] : String(err);
             log(`! ${label}: ${state.error}`);
@@ -218,6 +221,16 @@ export async function runSite(config, opts = {}) {
     ok: failing.length === 0 && allowlistOutcome.expired.length === 0 && baselineOutcome.expired.length === 0 && errors.length === 0,
     baselineWritten,
   };
+}
+
+/**
+ * The live allowlist entry covering a finding, if any.
+ * @param {Finding} f
+ * @param {import("../types.js").AllowlistEntry[]} entries
+ * @param {Date} now
+ */
+function entryFor(f, entries, now) {
+  return entries.find((e) => !isExpired(e, now) && entryMatches(e, f));
 }
 
 /** File-name-safe version of a state label. @param {string} s */
