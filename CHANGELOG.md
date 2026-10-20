@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Highlight screenshots. Every checked state with findings is captured once
+  with each finding's element boxed and numbered: blocking findings first in
+  red, warnings after in blue, a white halo under the stroke so the box reads
+  on any theme, the rest of the page dimmed with the boxes cut out, one box
+  per element however many rules it fails. The `[n]` that now starts a
+  finding line (test failure, console, Markdown `#` column) is its box. The
+  Playwright fixtures attach the PNG beside the JSON result; the CLI writes
+  `<out>/screenshots/` and lists the files in the Markdown report. Findings
+  that cannot be boxed (page-level targets, selectors that no longer resolve,
+  elements with no rendered box) are reported under "Not in the screenshots"
+  and as `a11y-not-in-screenshot` annotations, never dropped. The overlay is
+  a popover, so it draws above open dialogs, and is removed before the check
+  returns. Config: `screenshot: { mode, warnings, dim, fullPage, maxHeight }`;
+  `highlightFindings(page, findings)` is exported for direct use. Fixture:
+  fixtures/highlight-targets.html.
+- axe findings keep the element's HTML snippet in `data.html`.
 - New `readingLevel` check (`reading-level-advanced`, 3.1.5 AAA, warns by
   default): scores the page's main text with the Automated Readability Index
   and reports when it rounds above grade 9, the end of lower secondary

@@ -36,6 +36,31 @@ test.describe("a11y.check under reduced motion", () => {
   });
 });
 
+test.describe("highlight screenshot attachment", () => {
+  test.use({ a11yConfig: { policy: "wcag22-aa", checks: { reflow: "off", keyboard: "off", readingLevel: "off" } } });
+
+  test("a failing check attaches the boxed page and numbers the failure lines", async ({ page, a11y }, testInfo) => {
+    await page.goto("/axe-contrast.html");
+    await expect(a11y.check("contrast")).rejects.toThrow(/\[1\] color-contrast: #fails-aa/);
+    const names = testInfo.attachments.map((a) => `${a.name} ${a.contentType}`);
+    expect(names).toContain("ramp-check: contrast application/json");
+    expect(names).toContain("ramp-check: contrast (highlighted) image/png");
+    const json = JSON.parse(String(testInfo.attachments.find((a) => a.contentType === "application/json")?.body));
+    expect(json.findings.map((/** @type {any} */ f) => [f.rule, f.marker]).sort((/** @type {any} */ a, /** @type {any} */ b) => a[1] - b[1])).toEqual([
+      ["color-contrast", 1],
+      ["image-alt", 2],
+      ["color-contrast-enhanced", 3], // the warning, numbered after the blocking ones
+    ]);
+    expect(testInfo.annotations.filter((a) => a.type === "a11y-not-in-screenshot")).toEqual([]);
+  });
+
+  test("screenshot: { mode: \"off\" } attaches only the JSON", async ({ page, a11y }, testInfo) => {
+    await page.goto("/axe-contrast.html");
+    await expect(a11y.check("contrast", { screenshot: { mode: "off" } })).rejects.toThrow(/^(?!.*\[\d+\] )/s);
+    expect(testInfo.attachments.map((a) => a.contentType)).toEqual(["application/json"]);
+  });
+});
+
 test.describe("a11yConfig option", () => {
   test.use({ a11yConfig: { policy: "wcag22-aa", checks: { reflow: "off", keyboard: "off" } } });
 

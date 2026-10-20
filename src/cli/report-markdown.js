@@ -31,7 +31,7 @@ export function markdownReport(r) {
     for (const e of r.errors) out.push(`- ${e}`);
   }
   if (r.failing.length) {
-    out.push("", `### Failing (${r.failing.length})`, "", "| Page | Rule | Target | Criterion | Detail |", "| --- | --- | --- | --- | --- |");
+    out.push("", `### Failing (${r.failing.length})`, "", "| # | Page | Rule | Target | Criterion | Detail |", "| --- | --- | --- | --- | --- | --- |");
     for (const l of r.failing) out.push(row(l));
   }
   if (r.expiredAllowlist.length || r.expiredBaseline.length) {
@@ -40,7 +40,7 @@ export function markdownReport(r) {
     for (const e of r.expiredBaseline) out.push(`- baseline: ${e.page}${e.cell ? ` (${e.cell})` : ""} ${code(e.rule)} ${code(e.target)} expired ${e.expires}`);
   }
   if (r.warnings.length) {
-    out.push("", `<details><summary>Warnings (${r.warnings.length}, not blocking under ${code(r.policy)})</summary>`, "", "| Page | Rule | Target | Criterion | Detail |", "| --- | --- | --- | --- | --- |");
+    out.push("", `<details><summary>Warnings (${r.warnings.length}, not blocking under ${code(r.policy)})</summary>`, "", "| # | Page | Rule | Target | Criterion | Detail |", "| --- | --- | --- | --- | --- | --- |");
     for (const l of r.warnings) out.push(row(l));
     out.push("", "</details>");
   }
@@ -49,6 +49,19 @@ export function markdownReport(r) {
     for (const l of r.allowlisted) {
       const e = /** @type {import("../types.js").AllowlistEntry} */ (l.finding.allowlisted);
       out.push(`| ${where(l)} | ${code(l.finding.rule)} | ${code(l.finding.target)} | ${e.expires} | ${cell(e.reason)} |`);
+    }
+    out.push("", "</details>");
+  }
+  const shots = r.states.filter((s) => s.screenshot);
+  if (shots.length) {
+    out.push("", `<details><summary>Screenshots (${shots.length}, in the report directory's ${code("screenshots/")})</summary>`, "");
+    out.push("The `#` column above is the numbered box in the page's screenshot.", "");
+    for (const s of shots) {
+      const shot = /** @type {import("./run.js").StateScreenshot} */ (s.screenshot);
+      const where = s.cell ? `${cell(s.page)} (${cell(s.cell)})` : cell(s.page);
+      let line = `- ${where}: ${code(shot.file)}, ${shot.markers} box${shot.markers === 1 ? "" : "es"}`;
+      if (shot.unlocated.length) line += `; not shown: ${shot.unlocated.map((u) => `${code(u.rule)} ${code(u.target)} (${u.reason})`).join(", ")}`;
+      out.push(line);
     }
     out.push("", "</details>");
   }
@@ -73,7 +86,7 @@ function row(l) {
   const f = l.finding;
   const ref = f.wcag.level === "best-practice" ? "best practice" : `${f.wcag.criterion} ${f.wcag.level}`;
   const detail = f.help ? `[${cell(f.message)}](${f.help})` : cell(f.message);
-  return `| ${where(l)} | ${code(f.rule)} | ${code(f.target)} | ${ref} | ${detail} |`;
+  return `| ${f.marker ?? ""} | ${where(l)} | ${code(f.rule)} | ${code(f.target)} | ${ref} | ${detail} |`;
 }
 
 /**

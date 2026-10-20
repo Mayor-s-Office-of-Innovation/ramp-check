@@ -30,8 +30,8 @@ Options:
   --config <path>     config file (default: ramp-check.config.js in the cwd)
   --base-url <url>    override baseURL (preview deployments)
   --policy <name>     wcag-aaa | wcag22-aa | wcag21-aa
-  --out <dir>         where to write ramp-check.json and ramp-check.md
-  --no-report         skip writing report files
+  --out <dir>         where to write ramp-check.json, ramp-check.md and screenshots/
+  --no-report         skip writing report files and screenshots
   --quiet             only print failures
   -h, --help
 
@@ -99,6 +99,7 @@ export async function main(argv, io = {}) {
     report = await runSite(config, {
       writeBaseline: command === "baseline",
       log: values.quiet ? undefined : out,
+      screenshotDir: !values["no-report"] && config.out ? resolve(config.out, "screenshots") : undefined,
     });
   } catch (e) {
     err(e instanceof Error ? e.message : String(e));
@@ -111,6 +112,10 @@ export async function main(argv, io = {}) {
     writeFileSync(resolve(config.out, "ramp-check.json"), JSON.stringify(report, null, 2) + "\n");
     writeFileSync(resolve(config.out, "ramp-check.md"), markdownReport(report));
     out(`Reports: ${resolve(config.out, "ramp-check.json")}, ${resolve(config.out, "ramp-check.md")}`);
+    if (report.screenshotDir) {
+      const n = report.states.filter((s) => s.screenshot).length;
+      out(`Screenshots: ${report.screenshotDir} (${n}; the [n] before a finding is its box number)`);
+    }
   }
   return report.ok ? 0 : 1;
 }

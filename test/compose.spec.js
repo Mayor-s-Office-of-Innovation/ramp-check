@@ -37,7 +37,8 @@ test("warnings are printed on a passing run, and silenced with reportWarnings: q
     await expect(a11y.check("contrast", { checks: { keyboard: "off", reflow: "off" } })).rejects.toThrow();
     expect(lines).toEqual([
       "[ramp-check] contrast: 1 warning above policy wcag22-aa",
-      `[ramp-check] warn: ${formatFinding(result.warnings[0])}`,
+      // check() numbers findings by their box in the highlight screenshot: two blocking boxes, then this warning.
+      `[ramp-check] warn: [3] ${formatFinding(result.warnings[0])}`,
     ]);
     lines.length = 0;
     await expect(a11y.check("contrast", { checks: { keyboard: "off", reflow: "off" }, reportWarnings: "quiet" })).rejects.toThrow();

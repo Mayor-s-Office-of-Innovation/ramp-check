@@ -63,7 +63,9 @@ With a preview deployment:
    `ramp-check`, the requested version is installed for the run. Chromium is
    installed with its system dependencies.
 2. `npx ramp-check` runs. The Markdown report is appended to the job summary.
-3. The report directory is uploaded as an artifact, pass or fail.
+3. The report directory is uploaded as an artifact, pass or fail. It holds
+   the JSON and Markdown reports and `screenshots/`, one image per page
+   state with every finding boxed and numbered.
 4. On pull requests, the Markdown report is posted as a comment. A later run
    updates the same comment rather than adding another; the report starts
    with an HTML marker the action looks for.

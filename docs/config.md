@@ -14,7 +14,7 @@ fixtures as `a11yConfig`.
 | `setup` | `(page) => Promise<void>` | | Runs once per matrix cell before the pages. Log in here. |
 | `matrix` | object | `{}` (one cell) | Emulation axes, see below. |
 | `consistency` | `boolean \| { nav }` | `true` | Cross-page checks. `nav` is a selector for the primary navigation. |
-| `out` | string | `ramp-check-report` | Directory for `ramp-check.json` and `ramp-check.md`. |
+| `out` | string | `ramp-check-report` | Directory for `ramp-check.json`, `ramp-check.md` and `screenshots/`. |
 | `timeout` | number | `30000` | Per-action timeout in ms. |
 | `headless` | boolean | `true` | Set false to watch the run. |
 
@@ -54,6 +54,36 @@ with `reducedMotion: "reduce"`.
 | `tags` | string[] | | Escape hatch: raw axe tags, replaces the derived list. |
 | `disableRules` | string[] | | axe rule ids to skip entirely. Prefer the allowlist. |
 | `reportWarnings` | `"log" \| "quiet"` | `"log"` | Fixtures only: print warnings to the test output on passing runs. |
+| `screenshot` | object | see below | Highlight screenshots of each checked state. |
+
+## Screenshots
+
+Every checked state with something to show is captured once, with each
+finding's element boxed and numbered. The `[n]` at the start of a finding
+line (console, test failure, Markdown `#` column) is its box in the image.
+Blocking findings are numbered first and drawn in red; warnings follow in
+blue; the badge number carries the meaning on its own. One element that
+fails several rules gets one box. The rest of the page is dimmed slightly so
+the boxes stand out while the boxed colours stay true. Findings that cannot
+be boxed (page-level targets such as `html` or a view transition, a
+selector that no longer resolves, an element with no rendered box) are
+listed under "Not in the screenshots" rather than dropped.
+
+The Playwright fixtures attach the image beside the JSON result, so it shows
+inline in Playwright's HTML report. The CLI writes
+`<out>/screenshots/NN-<page>-<cell>.png` and lists them at the end of the
+Markdown report; the Action uploads them with the rest of the report
+directory.
+
+```js
+screenshot: {
+  mode: "findings",   // "findings" (default: only states with a boxable finding) | "always" | "off"
+  warnings: true,     // box warnings too, not only blocking findings
+  dim: true,          // dim the page around the boxes
+  fullPage: true,     // capture the whole document rather than the viewport
+  maxHeight: 15000,   // CSS px; taller documents fall back to a viewport capture
+},
+```
 
 ## Check options
 
@@ -99,3 +129,10 @@ const report = await runSite(config, { writeBaseline: false });
 
 `report.failing`, `report.warnings`, `report.allowlisted`, `report.baselined`
 are arrays of `{ page, cell, finding }`. `report.ok` is the exit status.
+Pass `{ screenshotDir }` to get highlight screenshots; each state then
+carries `screenshot: { file, markers, unlocated }`.
+
+```js
+import { highlightFindings } from "ramp-check";
+const shot = await highlightFindings(page, result.findings); // { png, markers, unlocated } or null
+```

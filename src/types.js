@@ -32,6 +32,7 @@
  * @property {AllowlistEntry} [allowlisted]  set when an allowlist entry covers it
  * @property {import("./checks/baseline.js").BaselineEntry} [baselined]  set when a baseline entry covers it
  * @property {Record<string, unknown>} [data]  check-specific detail kept for reports
+ * @property {number} [marker]  badge number in the highlight screenshot, set by highlightFindings
  */
 
 /**

@@ -45,6 +45,8 @@ const WARN_BY_DEFAULT = new Set(["textSpacing", "readingLevel"]);
  * @property {string[]} [disableRules]  axe rule ids to skip entirely; prefer the allowlist
  * @property {string | AllowlistEntry[]} [allowlist]  path to JSON, or inline entries
  * @property {"log" | "quiet"} [reportWarnings]  fixtures only: print warnings to the test output (default "log")
+ * @property {import("./screenshot.js").ScreenshotOptions} [screenshot]
+ *   highlight screenshots of each checked state (fixtures attach them, the CLI writes them); `{ mode: "off" }` disables
  */
 
 /**
@@ -173,13 +175,15 @@ export function classify(findings, config = {}, ctx = {}) {
 }
 
 /**
- * One line per finding: `rule: target (message) [criterion level]`.
+ * One line per finding: `rule: target (message) [criterion level]`, led by
+ * `[n]` when the finding is box n in the highlight screenshot.
  * @param {Finding} f
  */
 export function formatFinding(f) {
   let ref = f.wcag.level === "best-practice" ? "best practice" : `${f.wcag.criterion} ${f.wcag.level}`;
   if (f.technique) ref += `, ${f.technique}`;
-  return `${f.rule}: ${f.target} (${f.message}) [${ref}]`;
+  const n = f.marker ? `[${f.marker}] ` : "";
+  return `${n}${f.rule}: ${f.target} (${f.message}) [${ref}]`;
 }
 
 /**

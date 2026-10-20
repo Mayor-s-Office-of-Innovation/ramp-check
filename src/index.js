@@ -35,6 +35,7 @@ export {
   wcagFromAxeTags,
 } from "./policy.js";
 export { runChecks, classify, formatFinding, failures } from "./run.js";
+export { highlightFindings, describeUnlocated, HIGHLIGHT_COLORS } from "./screenshot.js";
 
 /** @typedef {import("./types.js").Finding} Finding */
 /** @typedef {import("./types.js").AllowlistEntry} AllowlistEntry */
@@ -45,5 +46,8 @@ export { runChecks, classify, formatFinding, failures } from "./run.js";
 /** @typedef {import("./types.js").CheckName} CheckName */
 /** @typedef {import("./run.js").RampCheckConfig} RampCheckConfig */
 /** @typedef {import("./run.js").CheckResult} CheckResult */
+/** @typedef {import("./screenshot.js").ScreenshotOptions} ScreenshotOptions */
+/** @typedef {import("./screenshot.js").Highlight} Highlight */
+/** @typedef {import("./screenshot.js").HighlightMarker} HighlightMarker */
 /** @typedef {import("./policy.js").PolicyName} PolicyName */
 /** @typedef {import("./policy.js").Policy} Policy */
