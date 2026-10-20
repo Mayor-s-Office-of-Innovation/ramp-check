@@ -296,10 +296,20 @@ export function highlightRuntime(input) {
     const label = String(m.n);
     const bw = 10 + label.length * 8;
     const bh = 18;
-    // Badge sits just above the box's top-left corner; flipped inside when
-    // the box touches the top edge, and kept inside the image on the right.
-    const bx = Math.min(Math.max(0, p.x - 1), width - bw);
-    const by = p.y >= bh + 2 ? p.y - bh - 2 : p.y + 2;
+    // Badge placement, in order of preference: in the margin left of the
+    // box, in the margin right of it, above it, inside its top-left corner.
+    // Dense pages stack boxed elements directly under other text, so a badge
+    // above the box would cover a neighbour; a centred layout nearly always
+    // has free margin beside the box, and a dimmed margin reads best.
+    const gap = 4;
+    let bx;
+    let by = p.y;
+    if (p.x >= bw + gap) bx = p.x - bw - gap;
+    else if (p.x + p.width + gap + bw <= width) bx = p.x + p.width + gap;
+    else {
+      bx = Math.min(Math.max(0, p.x - 1), width - bw);
+      by = p.y >= bh + gap ? p.y - bh - gap : p.y + gap;
+    }
     svg.appendChild(svgEl("rect", { x: bx, y: by, width: bw, height: bh, rx: 4, fill: color, stroke: "#fff", "stroke-width": 1.5 }));
     const text = svgEl("text", {
       x: bx + bw / 2, y: by + bh / 2 + 4.5, fill: "#fff", "text-anchor": "middle",

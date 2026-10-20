@@ -91,10 +91,14 @@ export async function runSite(config, opts = {}) {
   try {
     for (const cell of matrix) {
       const { name: cellName, ...use } = cell;
+      // storageState lets a logged-in session (saved once with
+      // context.storageState()) start every cell, instead of a setup hook
+      // logging in once per cell: fewer code redemptions, no per-cell devices.
       const context = await browser.newContext({
         ...use,
         baseURL: config.baseURL,
         reducedMotion: use.reducedMotion,
+        storageState: config.storageState,
       });
       await context.addInitScript(motionRuntime);
       const page = await context.newPage();

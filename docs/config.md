@@ -11,7 +11,8 @@ fixtures as `a11yConfig`.
 | --- | --- | --- | --- |
 | `baseURL` | string | | Pages are resolved against it. Override with `--base-url`. |
 | `pages` | `(string \| PageEntry)[]` | required | What to visit. |
-| `setup` | `(page) => Promise<void>` | | Runs once per matrix cell before the pages. Log in here. |
+| `setup` | `(page) => Promise<void>` | | Runs once per matrix cell before the pages. Log in here, or install route stubs. |
+| `storageState` | string or object | | A Playwright storage state (cookies, localStorage, and IndexedDB when saved with `indexedDB: true`) every cell's context starts from. Save it once from a logged-in context with `context.storageState({ path, indexedDB: true })`; cheaper than logging in per cell when codes or devices are rationed. |
 | `matrix` | object | `{}` (one cell) | Emulation axes, see below. |
 | `consistency` | `boolean \| { nav }` | `true` | Cross-page checks. `nav` is a selector for the primary navigation. |
 | `out` | string | `ramp-check-report` | Directory for `ramp-check.json`, `ramp-check.md` and `screenshots/`. |

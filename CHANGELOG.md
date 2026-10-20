@@ -18,6 +18,9 @@
   `highlightFindings(page, findings)` is exported for direct use. Fixture:
   fixtures/highlight-targets.html.
 - axe findings keep the element's HTML snippet in `data.html`.
+- CLI config: `storageState` (path or object) seeds every matrix cell's
+  browser context from a saved Playwright storage state, so a session logged
+  in once is reused instead of a `setup` hook logging in per cell.
 - New `readingLevel` check (`reading-level-advanced`, 3.1.5 AAA, warns by
   default): scores the page's main text with the Automated Readability Index
   and reports when it rounds above grade 9, the end of lower secondary

@@ -33,6 +33,7 @@ import { pathToFileURL } from "node:url";
  *   baseURL?: string,
  *   pages: (string | PageEntry)[],
  *   setup?: (page: Page) => Promise<void> | void,
+ *   storageState?: string | import("@playwright/test").BrowserContextOptions["storageState"],
  *   matrix?: MatrixAxes,
  *   baseline?: string,
  *   baselineExpiryDays?: number,
@@ -78,6 +79,7 @@ export async function loadConfig(file) {
     ...config,
     allowlist: typeof config.allowlist === "string" ? rel(config.allowlist) : config.allowlist,
     baseline: rel(config.baseline),
+    storageState: typeof config.storageState === "string" ? rel(config.storageState) : config.storageState,
     out: rel(config.out ?? "ramp-check-report"),
     configDir,
   };
