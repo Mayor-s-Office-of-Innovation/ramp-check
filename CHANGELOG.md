@@ -18,6 +18,8 @@
   `highlightFindings(page, findings)` is exported for direct use. Fixture:
   fixtures/highlight-targets.html.
 - axe findings keep the element's HTML snippet in `data.html`.
+- The CLI's per-page progress mark (✓/✘) no longer counts allowlisted
+  findings, so it agrees with the final verdict.
 - CLI config: `storageState` (path or object) seeds every matrix cell's
   browser context from a saved Playwright storage state, so a session logged
   in once is reused instead of a `setup` hook logging in per cell.
