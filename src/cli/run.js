@@ -58,6 +58,7 @@ import { normalisePage } from "./config.js";
  * @property {import("../checks/baseline.js").BaselineEntry[]} staleBaseline
  * @property {import("../checks/baseline.js").BaselineEntry[]} expiringSoon
  * @property {string[]} errors
+ * @property {import("../types.js").AllowlistEntry[]} unusedAllowlist
  * @property {boolean} ok
  * @property {string | null} baselineWritten
  */
@@ -214,6 +215,7 @@ export async function runSite(config, opts = {}) {
     allowlisted: located.filter((l) => l.finding.allowlisted),
     baselined: baselineOutcome.baselined,
     expiredAllowlist: allowlistOutcome.expired,
+    unusedAllowlist: allowlistOutcome.unused,
     expiredBaseline: baselineOutcome.expired,
     staleBaseline: baselineOutcome.stale,
     expiringSoon: baselineOutcome.expiringSoon,

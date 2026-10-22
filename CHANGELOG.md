@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Optional `ramp-check/reporter` for Playwright and a shared CLI `index.html`:
+  screenshots first, category coverage with green no-finding indicators, neutral
+  skipped-readability results, WCAG severity explanations, and exception notes
+  last. Report output is escaped and self-contained. Findings now carry an
+  additive `severityReason` describing the effective policy or check setting.
+
 - Highlight screenshots. Every checked state with findings is captured once
   with each finding's element boxed and numbered: blocking findings first in
   red, warnings after in blue, a white halo under the stroke so the box reads

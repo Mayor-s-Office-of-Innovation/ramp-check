@@ -50,6 +50,10 @@
     "./eslint": {
       "types": "./types/eslint.d.ts",
       "default": "./src/eslint.js"
+    },
+    "./reporter": {
+      "types": "./types/reporter.d.ts",
+      "default": "./src/reporter.js"
     }
   },
   "scripts": {
