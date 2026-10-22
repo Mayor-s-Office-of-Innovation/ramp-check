@@ -29,6 +29,7 @@
  * @property {string} [help]     URL with more detail
  * @property {string} [technique] WCAG failure or sufficient technique id the rule maps to, e.g. "F78"
  * @property {Severity} [severity]  set by the policy, not by the check
+ * @property {string} [severityReason]  explanation of the effective policy or check setting
  * @property {AllowlistEntry} [allowlisted]  set when an allowlist entry covers it
  * @property {import("./checks/baseline.js").BaselineEntry} [baselined]  set when a baseline entry covers it
  * @property {Record<string, unknown>} [data]  check-specific detail kept for reports

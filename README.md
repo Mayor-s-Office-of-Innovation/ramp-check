@@ -347,3 +347,39 @@ not done.
 ## License
 
 MIT
+
+## Screenshot-first HTML reports
+
+Add the optional reporter alongside your existing Playwright reporters:
+
+```js
+export default {
+  reporter: [
+    ["list"],
+    ["ramp-check/reporter", { outputFolder: "ramp-check-report" }],
+  ],
+};
+```
+
+Use `test` from `ramp-check/test` and `a11y.check()` (or `a11y.assert()`) to
+attach scan results. After testing, open `ramp-check-report/index.html` directly,
+or run `npx playwright show-report ramp-check-report`. The reporter writes on
+passing and failing runs and does not change test outcomes. It does not open a
+browser automatically. `outputFolder` resolves relative to the process working
+directory and defaults to `ramp-check-report`; ignore that folder in Git.
+
+CLI runs also write `index.html` beside the JSON and Markdown reports, using the
+same renderer. `--no-report` disables all report files.
+
+Screenshots come first, with a compact coverage summary underneath. Green checks
+mean no findings in a check category; warnings show their WCAG level and why they
+are warnings under the effective settings. Readability skipped for short, absent,
+or non-English text is shown neutrally as **Not measured**, never a green pass.
+Measured readability includes the estimated ARI grade in the details. Coverage
+counts categories, not individual axe rules; the description of axe coverage is
+not a claim that every possible rule applied to the page. Unused-exception notes
+appear last. Expired exceptions remain failures.
+
+The report is a self-contained HTML file with embedded screenshots and scan data.
+It contains the tested page's text, selectors, and screenshots: treat generated
+reports as test artifacts and review them before sharing publicly.

@@ -17,6 +17,7 @@ import { findConfig, loadConfig } from "./config.js";
 import { runSite } from "./run.js";
 import { consoleReport } from "./report-console.js";
 import { markdownReport } from "./report-markdown.js";
+import { htmlReport } from "./report-html.js";
 import { init } from "./init.js";
 
 const HELP = `ramp-check: automated accessibility checks for the pages you name.
@@ -30,7 +31,7 @@ Options:
   --config <path>     config file (default: ramp-check.config.js in the cwd)
   --base-url <url>    override baseURL (preview deployments)
   --policy <name>     wcag-aaa | wcag22-aa | wcag21-aa
-  --out <dir>         where to write ramp-check.json, ramp-check.md and screenshots/
+  --out <dir>         where to write index.html, ramp-check.json, ramp-check.md and screenshots/
   --no-report         skip writing report files and screenshots
   --quiet             only print failures
   -h, --help
@@ -111,6 +112,8 @@ export async function main(argv, io = {}) {
     mkdirSync(config.out, { recursive: true });
     writeFileSync(resolve(config.out, "ramp-check.json"), JSON.stringify(report, null, 2) + "\n");
     writeFileSync(resolve(config.out, "ramp-check.md"), markdownReport(report));
+    writeFileSync(resolve(config.out, "index.html"), htmlReport(report));
+    out(`HTML report: ${resolve(config.out, "index.html")}`);
     out(`Reports: ${resolve(config.out, "ramp-check.json")}, ${resolve(config.out, "ramp-check.md")}`);
     if (report.screenshotDir) {
       const n = report.states.filter((s) => s.screenshot).length;

@@ -161,6 +161,20 @@ export function classify(findings, config = {}, ctx = {}) {
       override: override === "auto" ? undefined : override,
     });
     f.severity = sev === "off" ? "warn" : sev;
+    const outcome = f.severity === "warn" ? "Warning" : "Blocking";
+    if (override !== "auto") {
+      f.severityReason = `${outcome} because this check ${modes[f.check] === undefined ? "defaults to" : "is configured as"} ${override}.`;
+    } else if (f.wcag.level === "best-practice") {
+      f.severityReason = `${outcome} under the ${config.bestPractice === undefined ? "default" : "configured"} best-practice setting.`;
+    } else if (f.severity === "block") {
+      f.severityReason = `Blocking because this criterion is within the WCAG ${policy.version} Level ${policy.level} target.`;
+    } else {
+      const reasons = [];
+      if (f.wcag.level === "AAA" && policy.level === "AA") reasons.push("Level AAA is above this scan’s Level AA target");
+      if (f.wcag.version > policy.version) reasons.push(`this criterion was introduced in WCAG ${f.wcag.version}, after this scan’s WCAG ${policy.version} target`);
+      f.severityReason = `Warning because ${reasons.join(" and ")}. It does not fail this scan.`;
+    }
+
   }
   const { expired, unused } = applyAllowlist(findings, loadAllowlist(config.allowlist), { now: ctx.now });
   return {
