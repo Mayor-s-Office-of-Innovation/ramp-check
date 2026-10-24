@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: segmented inputs</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    button { font: inherit; padding: .5rem 1rem; background: #0b4f8a; color: #fff; border: 0; border-radius: 4px; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    .skip { position: absolute; left: -999px; top: 0; background: #fff; padding: .5rem; }
+    .skip:focus { left: 1rem; }
+    input { font: inherit; padding: .5rem; }
+    label { display: block; margin-top: .75rem; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Keyboard</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <h1>Segmented inputs</h1>
+    <p>Not a defect. Tab walks the fields inside each native date and time control before leaving it, so the active element repeats several times without any trap.</p>
+    <form>
+      <label for="name">Name <input id="name" type="text"></label>
+      <label for="date">Date <input id="date" type="date"></label>
+      <label for="time">Time <input id="time" type="time"></label>
+      <label for="month">Month <input id="month" type="month"></label>
+      <label for="week">Week <input id="week" type="week"></label>
+      <label for="when">Date and time <input id="when" type="datetime-local"></label>
+      <p><button type="button" id="submit">Save</button></p>
+    </form>
+  </main>
+  <footer><p>Fixture for ramp-check.</p></footer>
+</body>
+</html>

@@ -17,6 +17,8 @@ it still catches it. A check without a page here is not done.
 | `keyboard-focus-invisible.html` | keyboard | A button with no focus indicator, one with a 1 px outline, one with a proper box-shadow ring. |
 | `keyboard-delegated-focus.html` | keyboard | OTP-style widgets whose visible ring is drawn on a surrogate segment while Tab lands on a 1×1 invisible proxy input (`delegatesFocus`). Must stay quiet. One ringless widget must still fail. |
 | `keyboard-focus-obscured.html` | keyboard | Links fully and partly under an 80 px fixed banner. |
+| `keyboard-focus-hidden.html` | keyboard | A skip link carrying both the always-hidden and the hidden-until-focus utility classes (stays clipped to nothing on focus), a link parked off-screen with no `:focus` rule, and one at opacity 0: each is invisible focus, not an overlay. A link with only the focusable class must stay quiet. |
+| `keyboard-date-input.html` | keyboard | Native date, time, month, week and datetime-local inputs. Not a defect: Tab walking their internal fields repeats the active element and must not read as a trap. |
 | `keyboard-skip-link.html` | keyboard | A skip link whose target id does not exist. |
 | `keyboard-banner-ring.html` | keyboard | A cookie banner whose controls form a closed Tab ring before the page; the audit reports one honest ring finding, not unreachable elements behind it. |
 | `keyboard-rerender.html` | keyboard | Ten ghost links swapped for fresh ones mid-audit; replaced candidates are dropped with one annotation, not blamed. |

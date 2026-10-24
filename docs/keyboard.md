@@ -10,9 +10,9 @@ default. Turn it off with `checks: { keyboard: "off" }`.
 | Rule | Criterion | Level | Fires when |
 | --- | --- | --- | --- |
 | `keyboard-unreachable` | 2.1.1 | A | an interactive element never received focus during a full traversal |
-| `keyboard-trap` | 2.1.2 | A | Tab stopped moving focus, or the traversal neither ended nor cycled within its step budget. When the audit is scoped to an open dialog, the finding names the dialog and says a modal may hold focus — verify the exit |
+| `keyboard-trap` | 2.1.2 | A | Tab stopped moving focus, or the traversal neither ended nor cycled within its step budget. Native date and time inputs get a repeat budget first (Tab walks their fields). When the audit is scoped to an open dialog, the finding names the dialog and says a modal may hold focus — verify the exit |
 | `positive-tabindex` | 2.4.3 | A | an interactive element has `tabindex` greater than zero |
-| `focus-not-visible` | 2.4.7 | AA | no computed style changed on focus (including shadow hosts'), and a padded screenshot is byte-identical before and after |
+| `focus-not-visible` | 2.4.7 | AA | no computed style changed on focus (including shadow hosts'), and a padded screenshot is byte-identical before and after; or the element paints nothing of itself while focused (clipped to nothing, 1×1 with overflow hidden, opacity 0, off-screen), named in the message |
 | `focus-indicator-thin` | 2.4.13 | AAA | the only visible change is an outline under 2 CSS px (heuristic) |
 | `focus-obscured` | 2.4.11 | AA (2.2) | every sampled point of the focused element hit-tests to something else |
 | `focus-partially-obscured` | 2.4.12 | AAA (2.2) | some sampled points hit-test to something else |
@@ -95,6 +95,16 @@ audit reads styles between Tabs, so the same element can hold focus twice
 without any trap a real user would feel (squarespace-class — user-verified
 clean traversal). Trap verdicts remain for repeats elsewhere.
 
+**`keyboard-trap` and segmented inputs.** Chromium's native `date`,
+`time`, `month`, `week` and `datetime-local` inputs are several Tab
+stops each: Tab moves between the fields (month, day, year) and then the
+picker button while `document.activeElement` stays the input, which from
+outside looks exactly like a trap. A date is four stops, so the generic
+two-repeat threshold fired on every date input. Each type now has a repeat
+budget one above its measured stops (date and time 5, month and week 4,
+datetime-local 8, the extra one for a seconds field); a repeat beyond that
+is still a trap. Measured in Chromium, Playwright 1.63, 2026-10-24.
+
 **State-holder inputs.** A `tabindex="-1"` checkbox or radio can still be a
 working part of the form: the newsletter-card idiom hides the real checkbox
 (`visually-hidden`, `tabindex="-1"`) and drives it from a visible whole-card
@@ -127,6 +137,19 @@ so a real indicator away from the proxy passes. When the style layer sees
 only the proxy's own thin UA outline, the pixel layer is authoritative: a
 byte-different host region (a real surrogate ring) means visible; an
 identical one reports `focus-indicator-thin`, not `focus-not-visible`.
+
+**Hidden while focused.** Before the indicator or obscured verdicts, the
+audit asks whether the focused element paints anything of itself: a
+visually-hidden utility class that does not drop on `:focus` leaves it at
+`clip: rect(0, 0, 0, 0)` or a 1×1 box with overflow hidden; a skip link
+parked off-screen with no `:focus` rule never comes back; `opacity: 0` or
+`visibility: hidden` paint nothing. The hit-test at such a box lands on
+whatever sits behind it, which used to read as an overlay. It is reported
+as `focus-not-visible` with the reason in the message and `data.hidden`,
+never as `focus-obscured`. The common cause is a skip link carrying both a
+framework's always-hidden and hidden-until-focus classes. A delegated-focus
+proxy inside a shadow root is exempt (its ring is on a surrogate), and so is
+an element whose screenshot changed on focus.
 
 **Obscured focus** samples the centre and four points a quarter of the way in
 from each corner, using `elementsFromPoint` on the element's own root and

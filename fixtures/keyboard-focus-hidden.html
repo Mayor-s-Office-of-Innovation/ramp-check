@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keyboard: hidden while focused</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; line-height: 1.5; }
+    header, main, footer { padding: 1rem; max-width: 60ch; margin: 0 auto; }
+    nav a { margin-right: .75rem; color: #0b4f8a; }
+    :focus-visible { outline: 3px solid #0b4f8a; outline-offset: 2px; }
+    /* The two utility classes as a CSS framework ships them: the first hides
+       always, the second hides until focus. A link that carries both never
+       reappears — the seeded defect. */
+    .visually-hidden,
+    .visually-hidden-focusable:not(:focus):not(:focus-within) {
+      width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important;
+      overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important;
+      position: absolute !important;
+    }
+    .skip { position: absolute; top: .5rem; left: .5rem; background: #fff; padding: .5rem; z-index: 10; }
+    /* Parked off-screen with no :focus rule to bring it back. */
+    .offscreen { position: absolute; left: -999px; top: 0; }
+    .ghost { opacity: 0; }
+  </style>
+</head>
+<body>
+  <a id="both" class="visually-hidden visually-hidden-focusable skip" href="#main">Skip to main content</a>
+  <a id="focusable" class="visually-hidden-focusable skip" href="#main">Skip to main content (works)</a>
+  <header>
+    <nav aria-label="Primary"><a href="/clean.html">Home</a> <a href="/keyboard-clean.html">Keyboard</a> <a href="/axe-contrast.html">Contrast</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <h1>Hidden while focused</h1>
+    <p>The first skip link carries both utility classes, so it stays clipped to nothing when it takes focus. The second carries only the focusable one and appears. Two more links never render while focused: one parked off-screen, one at opacity 0.</p>
+    <p><a id="offscreen" class="offscreen" href="/clean.html">Off-screen link</a> <a id="ghost" class="ghost" href="/clean.html">Transparent link</a> <a id="fine" href="/clean.html">Ordinary link</a></p>
+  </main>
+  <footer><p>Fixture for ramp-check.</p></footer>
+</body>
+</html>
