@@ -118,6 +118,12 @@ axe only covers targets-not-existing, not activation-not-moving-focus.
 
 ### focus-not-visible (2.4.7 AA)
 
+Oct 2026: an element that paints nothing of itself while focused (a skip
+link carrying both a framework's always-hidden and hidden-until-focus
+utility classes stays at `clip: rect(0,0,0,0)`) was reaching the
+`focus-obscured` verdict instead, blaming an overlay that was not there. It
+is now reported here with the reason (fixture: keyboard-focus-hidden.html).
+
 Rule verified honestly on the corpus with the pixel-probe machinery:
 computed-style diff at rest vs `:focus-visible` plus a screenshot diff
 fallback. The anchor case was user-confirmed as a real site defect; two
@@ -212,6 +218,11 @@ unadjudicated.
 | m3.material.io, mainichi.jp, dell.com, openstack.org, telerik.com | 1 each | probe | pending |
 
 ### keyboard-trap (2.1.2 A)
+
+Oct 2026: native `type=date` inputs were a systematic FP — Tab walks three
+fields and the picker button while `activeElement` stays the input, past
+the two-repeat threshold. Segmented input types now carry a per-type repeat
+budget (fixture: keyboard-date-input.html).
 
 Trap-in-modal relabel shipped (a dialog holding Tab is dialog behavior, not
 2.1.2); repeat-on-carousel-clone now re-inventories instead of reporting a

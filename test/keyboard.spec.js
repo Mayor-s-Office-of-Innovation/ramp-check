@@ -117,6 +117,34 @@ test.describe("keyboard audit", () => {
     });
   });
 
+  test("a visually-hidden style that survives focus is invisible focus, not an overlay", async ({ page }) => {
+    await page.goto("/keyboard-focus-hidden.html");
+    const result = await keyboardAudit(page);
+    expect(keys(result.findings)).toEqual([
+      "focus-not-visible a#both",
+      "focus-not-visible a#ghost",
+      "focus-not-visible a#offscreen",
+    ]);
+    const both = result.findings.find((f) => f.target === "a#both");
+    expect(both?.message).toContain("paints nothing while focused (clip: rect(0px, 0px, 0px, 0px))");
+    expect(both?.wcag).toEqual({ criterion: "2.4.7", level: "AA", version: "2.0" });
+    expect(result.findings.find((f) => f.target === "a#offscreen")?.data?.hidden).toMatch(/^positioned outside the scrollable document/);
+    expect(result.findings.find((f) => f.target === "a#ghost")?.data?.hidden).toBe("opacity: 0");
+    // The clipped skip link still works; it is only invisible.
+    expect(result.skipLink).toEqual({ present: true, path: "a#both", works: true });
+    // The link that carries only the focusable class appears and is quiet.
+    expect(result.sequence.find((s) => s.path === "a#focusable")?.hidden).toBeNull();
+  });
+
+  test("Tab walking the fields of native date and time inputs is not a trap", async ({ page }) => {
+    await page.goto("/keyboard-date-input.html");
+    const result = await keyboardAudit(page);
+    expect(keys(result.findings)).toEqual([]);
+    expect(result.terminated).toBe("end");
+    expect(result.sequence.map((s) => s.path)).toContain("button#submit");
+    expect(result.sequence.find((s) => s.path === "input#date")?.segments).toBe(5);
+  });
+
   test("a skip link whose target does not exist", async ({ page }) => {
     await page.goto("/keyboard-skip-link.html");
     const result = await keyboardAudit(page);

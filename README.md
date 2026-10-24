@@ -223,9 +223,9 @@ Details and the ADA references: [docs/conformance-level.md](docs/conformance-lev
 | motion: `view-transition-animates` | 2.3.3 | AAA | `document.startViewTransition()` cross-fades, which the API does not skip under reduced motion and a `*` CSS rule cannot reach |
 | reflow: `reflow-horizontal-scroll` | 1.4.10 | AA | horizontal scrolling at 320 px, naming the elements that stick out |
 | keyboard: `keyboard-unreachable` | 2.1.1 | A | interactive elements (controls, `[role]` widgets, `[onclick]`) a full Tab traversal never reaches, following focus into shadow roots |
-| keyboard: `keyboard-trap` | 2.1.2 | A | Tab stops moving focus |
+| keyboard: `keyboard-trap` | 2.1.2 | A | Tab stops moving focus (native date and time inputs get a repeat budget for their fields first) |
 | keyboard: `positive-tabindex` | 2.4.3 | A | `tabindex` above zero overrides document order |
-| keyboard: `focus-not-visible` | 2.4.7 | AA | no computed-style or pixel change when an element takes focus |
+| keyboard: `focus-not-visible` | 2.4.7 | AA | no computed-style or pixel change when an element takes focus, or the element paints nothing while focused (clipped to nothing, 1×1, opacity 0, off-screen) |
 | keyboard: `focus-indicator-thin` | 2.4.13 | AAA | the only indicator is an outline under 2 px (heuristic) |
 | keyboard: `focus-obscured`, `focus-partially-obscured` | 2.4.11, 2.4.12 | AA, AAA | the focused element is behind a sticky header, banner or overlay |
 | keyboard: `focus-changes-context` | 3.2.1 | A | receiving focus navigates the page |

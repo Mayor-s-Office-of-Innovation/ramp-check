@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Keyboard: an element that paints nothing of itself while focused — a
+  visually-hidden utility class that does not drop on `:focus` (a skip link
+  carrying both a framework's always-hidden and hidden-until-focus classes),
+  a 1×1 box with overflow hidden, `opacity: 0`, or a link parked off-screen
+  with no `:focus` rule — is now `focus-not-visible` with the reason in the
+  message and `data.hidden`. It used to be `focus-obscured`, blaming a
+  sticky header or overlay that was not there: the hit-test at a clipped box
+  lands on whatever sits behind it. Fixture: fixtures/keyboard-focus-hidden.html.
+- Keyboard: native `date`, `time`, `month`, `week` and `datetime-local`
+  inputs no longer read as `keyboard-trap`. Tab walks their fields and
+  picker button while `activeElement` stays the input — a date is four
+  stops in Chromium, well past the old two-repeat threshold. Each type has a
+  repeat budget one above its measured stops; a repeat beyond that is still
+  a trap. Fixture: fixtures/keyboard-date-input.html.
+
 - Optional `ramp-check/reporter` for Playwright and a shared CLI `index.html`:
   screenshots first, category coverage with green no-finding indicators, neutral
   skipped-readability results, WCAG severity explanations, and exception notes

@@ -19,14 +19,20 @@
  *   annotated finding about the ring replaces per-element blame.
  * - positive-tabindex (2.4.3 A): a tabindex above zero overrides document order.
  * - keyboard-trap (2.1.2 A): Tab stopped moving focus, or the sequence never
- *   terminated or cycled within the step budget.
+ *   terminated or cycled within the step budget. Native segmented controls
+ *   (date, time, month, week, datetime-local) keep activeElement while Tab
+ *   walks their fields, so each type gets a repeat budget before a verdict.
  * - focus-not-visible (2.4.7 AA): the focused element's computed outline,
  *   box-shadow, border, background, color and text-decoration all match its
  *   resting state, and a padded screenshot of it is byte-identical before
  *   and after focus. When focus crosses a shadow boundary, the shadow hosts'
  *   computed styles join the diff (a delegated-focus widget may draw its ring
  *   on a surrogate — segments, a field—rather than the proxy input) and the
- *   screenshot region covers the outermost host.
+ *   screenshot region covers the outermost host. An element that paints
+ *   nothing of itself while focused — clipped to nothing by a visually-hidden
+ *   style that does not drop on :focus, 1×1 with overflow hidden, opacity 0,
+ *   or positioned off-screen — is reported here with the reason, never as
+ *   obscured: no other content is covering it.
  * - focus-indicator-thin (2.4.13 AAA, heuristic): the only visible change is
  *   an outline under 2 CSS px.
  * - focus-obscured (2.4.11 AA, WCAG 2.2) and focus-partially-obscured
@@ -52,7 +58,9 @@
  * the sequential focus starting point; `el.focus()` after a keyboard event
  * keeps `:focus-visible`; screenshots of an unchanged state are
  * byte-identical; `shadowRoot.elementFromPoint` resolves inner elements;
- * Tab past the last element lands on `body` before wrapping.
+ * Tab past the last element lands on `body` before wrapping. Tab inside a
+ * `type=date` input leaves activeElement unchanged three times (month, day,
+ * year, picker button) and then moves on (2026-10-24).
  *
  * The audit moves focus and may change the URL fragment; both are restored
  * before it returns. Content inside iframes and closed shadow roots is not
@@ -82,6 +90,8 @@
  * @property {string[]} styleDiff  computed properties that changed on focus
  * @property {number} outlineWidth px, when the outline changed
  * @property {"none" | "partial" | "full" | "unknown"} obscured
+ * @property {string | null} hidden  why the element paints nothing of itself while focused (clipped to nothing, 1×1 with overflow hidden, opacity 0, off-screen); null when it renders
+ * @property {number} [segments]  Tab stops inside a native segmented control (date, time, month, week, datetime-local); 0 otherwise
  * @property {{ x: number, y: number, width: number, height: number } | null} rect  viewport-relative
  * @property {boolean} screenshotChanged  set by the fallback when styles did not change
  * @property {boolean} hostStyleDiff  a shadow ancestor's computed styles changed on focus (delegated-focus surrogate ring)
@@ -210,6 +220,48 @@ function keyboardRuntime({ props }) {
     if (inClosedDetails(el)) return false;
     const cs = getComputedStyle(el);
     return cs.visibility !== "hidden" && cs.display !== "none";
+  }
+  /**
+   * Repeat budget for Chromium's native segmented controls. Tab moves between
+   * the fields (month, day, year) and then the picker button while
+   * document.activeElement stays the input, which looks exactly like a trap
+   * from outside. Measured stops (Playwright 1.63, 2026-10-24): date 4,
+   * time 4, month 3, week 3, datetime-local 7; each budget is one above
+   * that, since a `step` under a minute adds a seconds field.
+   * @type {Record<string, number>}
+   */
+  const SEGMENTED_INPUTS = { date: 5, time: 5, month: 4, week: 4, "datetime-local": 8 };
+  /**
+   * Why does the focused element paint nothing of itself? A visually-hidden
+   * class that does not drop on :focus clips the element to nothing
+   * (`clip: rect(0,0,0,0)`, `clip-path: inset(50%)`) or shrinks it to 1×1
+   * with overflow hidden; a skip link parked off-screen that never comes
+   * back on focus sits outside the scrollable document. Any of these is
+   * invisible focus, so the obscured hit-test must not blame other content
+   * for it. Off-screen is judged in document space, not viewport space: an
+   * element below the fold is on its way into view (smooth scrolling can
+   * leave the rect behind the scroll at read time), while one at
+   * `left: -999px` can never be scrolled to.
+   * @param {Element} el
+   * @param {DOMRect} r  the element's current bounding box
+   * @returns {string | null}
+   */
+  function hiddenWhileFocused(el, r) {
+    const cs = getComputedStyle(el);
+    if (cs.visibility === "hidden") return "visibility: hidden";
+    if (cs.opacity === "0") return "opacity: 0";
+    if (cs.position !== "static" && /^rect\(\s*0px,\s*0px,\s*0px,\s*0px\s*\)$/.test(cs.clip)) return `clip: ${cs.clip}`;
+    const inset = /^inset\((\d+(?:\.\d+)?)%/.exec(cs.clipPath);
+    if (inset && Number(inset[1]) >= 50) return `clip-path: ${cs.clipPath}`;
+    if (r.width <= 1 && r.height <= 1 && cs.overflow === "hidden") return `${r.width}×${r.height} box with overflow hidden`;
+    const sx = window.scrollX;
+    const sy = window.scrollY;
+    const docW = document.documentElement.scrollWidth;
+    const docH = document.documentElement.scrollHeight;
+    if (r.right + sx <= 0 || r.bottom + sy <= 0 || r.x + sx >= docW || r.y + sy >= docH) {
+      return `positioned outside the scrollable document at ${Math.round(r.x + sx)},${Math.round(r.y + sy)}`;
+    }
+    return null;
   }
   /**
    * Does the element paint anything at its box? A transparent stretched-link
@@ -373,7 +425,7 @@ function keyboardRuntime({ props }) {
   function step() {
     const el = deepActive();
     if (!el || el === document.body || el === document.documentElement) {
-      return { index: -1, path: "body", isBody: true, isFrame: false, styleDiff: [], outlineWidth: 0, obscured: "unknown", rect: null, screenshotChanged: false, hostStyleDiff: false, hostRect: null };
+      return { index: -1, path: "body", isBody: true, isFrame: false, styleDiff: [], outlineWidth: 0, obscured: "unknown", hidden: null, rect: null, screenshotChanged: false, hostStyleDiff: false, hostRect: null };
     }
     const index = elements.indexOf(el);
     // Uninventoried steps (re-rendered subtrees, script-added widgets) use a
@@ -420,6 +472,8 @@ function keyboardRuntime({ props }) {
     const r = el.getBoundingClientRect();
     const vw = document.documentElement.clientWidth;
     const vh = document.documentElement.clientHeight;
+    const hidden = hiddenWhileFocused(el, r);
+    const segments = el instanceof HTMLInputElement ? (SEGMENTED_INPUTS[el.type] ?? 0) : 0;
     // Centre plus four points a quarter of the way in from each corner:
     // the corners themselves miss on rounded buttons.
     const qx = r.width / 4;
@@ -465,6 +519,8 @@ function keyboardRuntime({ props }) {
       styleDiff,
       outlineWidth,
       obscured,
+      hidden,
+      segments,
       rect: { x: r.x, y: r.y, width: r.width, height: r.height },
       screenshotChanged: false,
       hostStyleDiff,
@@ -844,7 +900,12 @@ export async function keyboardAudit(page, opts = {}) {
         continue;
       }
       repeats += 1;
-      if (repeats >= 2) {
+      // A native segmented control (date, time, month, week, datetime-local)
+      // keeps activeElement while Tab walks its fields and picker button: a
+      // date is four Tab stops in Chromium. Spend that budget before calling
+      // it a trap.
+      const budget = Math.max(2, step.segments ?? 0);
+      if (repeats >= budget) {
         // A repeat inside an auto-scrolling carousel is churn, not a trap:
         // the track repositions focusable clones under focus while the audit
         // reads styles between Tabs (squarespace-class; a real user walks
@@ -1231,7 +1292,14 @@ export async function keyboardAudit(page, opts = {}) {
   // header, banner, dialog sheet) persists; a one-frame layout/transition
   // race at the instant focus arrived does not. A demoted read stays
   // visible in the step's data — never dropped silently.
-  const obscuredSteps = sequence.filter((s) => !s.isFrame && (s.obscured === "full" || s.obscured === "partial"));
+  // An element that paints nothing of itself while focused (a visually-hidden
+  // style that survives :focus, an off-screen skip link that never returns)
+  // is invisible focus, not an overlay: the hit-test at its box lands on
+  // whatever sits behind it. A delegated-focus proxy (hostRect set) draws its
+  // ring on a surrogate, and a changed screenshot is paint, so neither counts.
+  /** @param {FocusStep} s */
+  const selfHidden = (s) => !!s.hidden && !s.hostRect && !s.screenshotChanged;
+  const obscuredSteps = sequence.filter((s) => !s.isFrame && !selfHidden(s) && (s.obscured === "full" || s.obscured === "partial"));
   for (const s of obscuredSteps) {
     const persisted = /** @type {FocusStep["obscured"] | null} */ (
       await page.evaluate(
@@ -1262,6 +1330,18 @@ export async function keyboardAudit(page, opts = {}) {
           data: { rect: s.rect },
         });
       }
+      continue;
+    }
+    if (selfHidden(s)) {
+      add({
+        check: "keyboard",
+        rule: "focus-not-visible",
+        target: s.path,
+        message: `paints nothing while focused (${s.hidden}), so its focus indicator is invisible too; a visually-hidden or off-screen style must drop on :focus`,
+        wcag: { criterion: "2.4.7", level: "AA", version: "2.0" },
+        help: `${understanding}focus-visible.html`,
+        data: { hidden: s.hidden, rect: s.rect, styleDiff: s.styleDiff },
+      });
       continue;
     }
     const visibleChange = s.styleDiff.length > 0 || s.screenshotChanged || s.hostStyleDiff;
