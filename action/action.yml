@@ -55,11 +55,23 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
       run: |
-        if [ -f package-lock.json ]; then npm ci; elif [ -f package.json ]; then npm install; fi
+        # Skip the install when an earlier step already did it: npm ci wipes
+        # node_modules and starts over, which doubled the install time.
+        if [ ! -d node_modules/ramp-check ] || [ ! -d node_modules/@playwright/test ]; then
+          if [ -f package-lock.json ]; then npm ci; elif [ -f package.json ]; then npm install; fi
+        fi
         if [ ! -d node_modules/ramp-check ]; then
           npm install --no-save "ramp-check@${VERSION}" @playwright/test
         fi
-        npx playwright install --with-deps chromium
+        # Playwright's official image (mcr.microsoft.com/playwright) sets
+        # PLAYWRIGHT_BROWSERS_PATH and ships Chromium with its system
+        # libraries. There, `install` is a no-op when versions match, but
+        # `--with-deps` would still run apt-get, so leave it out.
+        if [ "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright" ]; then
+          npx playwright install chromium
+        else
+          npx playwright install --with-deps chromium
+        fi
 
     - name: Run ramp-check
       id: run
