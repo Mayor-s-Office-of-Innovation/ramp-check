@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Action: faster installs. The install step is skipped when an earlier step
+  already installed `ramp-check` and `@playwright/test` (it used to run
+  `npm ci` again, wiping and rebuilding node_modules). Inside Playwright's
+  official Docker image, detected by `PLAYWRIGHT_BROWSERS_PATH`, the
+  Chromium download and the apt-get step are skipped too. The action README
+  shows the `container:` setup.
+
 - Keyboard: an element that paints nothing of itself while focused — a
   visually-hidden utility class that does not drop on `:focus` (a skip link
   carrying both a framework's always-hidden and hidden-until-focus classes),

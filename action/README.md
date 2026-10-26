@@ -59,9 +59,10 @@ With a preview deployment:
 
 ## What happens
 
-1. Node is set up and dependencies installed. If the repo does not depend on
-   `ramp-check`, the requested version is installed for the run. Chromium is
-   installed with its system dependencies.
+1. Node is set up and dependencies installed, unless an earlier step already
+   installed them. If the repo does not depend on `ramp-check`, the requested
+   version is installed for the run. Chromium is installed with its system
+   dependencies.
 2. `npx ramp-check` runs. The Markdown report is appended to the job summary.
 3. The report directory is uploaded as an artifact, pass or fail. It holds
    the JSON and Markdown reports and `screenshots/`, one image per page
@@ -75,6 +76,31 @@ With a preview deployment:
 
 Run `npx ramp-check baseline` locally, commit `a11y-baseline.json`, and the
 action fails only on new findings. See [docs/baseline.md](../docs/baseline.md).
+
+## Faster runs
+
+Installing Chromium and its system libraries is the slow part of the action.
+Run the job in Playwright's official image and both are already there: the
+action detects the image and skips the download and the apt-get step. Match
+the tag to the `@playwright/test` version in your lockfile, and bump the two
+together.
+
+```yaml
+jobs:
+  a11y:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: (npm run serve &) && sleep 2
+      - uses: Mayor-s-Office-of-Innovation/ramp-check/action@main
+```
+
+The image has Node and git but no Python, so serve the site with a Node
+server rather than `python3 -m http.server`.
 
 ## Pinning
 
